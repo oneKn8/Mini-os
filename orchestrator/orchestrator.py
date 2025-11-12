@@ -1,137 +1,97 @@
 """
-Main orchestrator for multi-agent workflows.
+Multi-agent orchestrator
 """
 
-import time
+import logging
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Dict, List
+from typing import Any, Dict, List
 
-from sqlalchemy.orm import Session
-
-from backend.api.models import AgentRunLog, Item, UserPreferences
 from orchestrator.agents.base import AgentContext, AgentResult
-from orchestrator.registry import registry
+from orchestrator.registry import AgentRegistry
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class OrchestrationResult:
+    """Result from orchestrating multiple agents."""
+
+    status: str  # success, partial_failure, failure
+    results: Dict[str, AgentResult]
+    execution_time_ms: int
+    error: str = None
 
 
 class Orchestrator:
-    """Orchestrates multi-agent workflows."""
+    """Orchestrates execution of multiple agents based on intent."""
 
-    def __init__(self, db: Session):
-        self.db = db
+    def __init__(self):
+        self.registry = AgentRegistry()
 
-    async def execute(self, user_id: str, intent: str, **kwargs) -> Dict:
-        """
-        Execute an orchestration intent.
-
-        Args:
-            user_id: User ID
-            intent: Intent type (refresh_inbox, plan_day, handle_item)
-            **kwargs: Additional parameters
-
-        Returns:
-            Execution summary
-        """
-        start_time = time.time()
+    async def run(self, intent: str, context: AgentContext) -> OrchestrationResult:
+        """Execute agent chain for the given intent."""
+        start_time = datetime.now()
 
         try:
-            # Get user preferences
-            preferences = self.db.query(UserPreferences).filter(UserPreferences.user_id == user_id).first()
-            user_prefs = self._preferences_to_dict(preferences) if preferences else {}
+            agent_sequence = self._get_agent_sequence(intent)
+            results = {}
 
-            # Build context
-            context = AgentContext(
-                user_id=user_id,
-                intent=intent,
-                items=kwargs.get("items", []),
-                user_preferences=user_prefs,
-                weather_context=kwargs.get("weather_context", {}),
-                metadata=kwargs,
-            )
+            for agent_name in agent_sequence:
+                agent = self.registry.get(agent_name)
 
-            # Determine which agents to run
-            agents_to_run = self._get_agents_for_intent(intent)
+                if not agent:
+                    logger.warning(f"Agent {agent_name} not found in registry")
+                    continue
 
-            # Execute agents
-            results = []
-            for agent_name in agents_to_run:
-                try:
-                    agent_class = registry.get(agent_name)
-                    agent = agent_class(agent_name)
-                    result = await agent.run(context)
-                    results.append(result)
+                logger.info(f"Running agent: {agent_name}")
+                result = await agent.run(context)
+                results[agent_name] = result
 
-                    # Log agent run
-                    self._log_agent_run(user_id, agent_name, intent, result)
+                if result.status == "error":
+                    logger.error(f"Agent {agent_name} failed: {result.error_message}")
 
-                    # Update context with results
-                    if result.action_proposals:
-                        context.action_proposals.extend(result.action_proposals)
+                self._update_context(context, result)
 
-                except Exception as e:
-                    # Log error but continue
-                    error_result = AgentResult(
-                        agent_name=agent_name, status="error", error_message=str(e), duration_ms=0
-                    )
-                    results.append(error_result)
-                    self._log_agent_run(user_id, agent_name, intent, error_result)
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 
-            duration_ms = int((time.time() - start_time) * 1000)
-
-            return {
-                "status": "success" if any(r.status == "success" for r in results) else "partial",
-                "intent": intent,
-                "agents_run": len(results),
-                "successful": sum(1 for r in results if r.status == "success"),
-                "failed": sum(1 for r in results if r.status == "error"),
-                "action_proposals_created": sum(len(r.action_proposals) for r in results),
-                "duration_ms": duration_ms,
-                "results": [{"agent": r.agent_name, "status": r.status} for r in results],
-            }
+            return OrchestrationResult(status="success", results=results, execution_time_ms=duration_ms)
 
         except Exception as e:
-            duration_ms = int((time.time() - start_time) * 1000)
-            return {
-                "status": "error",
-                "intent": intent,
-                "error": str(e),
-                "duration_ms": duration_ms,
-            }
+            duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
+            logger.error(f"Orchestration failed: {e}", exc_info=True)
+            return OrchestrationResult(status="failure", results={}, execution_time_ms=duration_ms, error=str(e))
 
-    def _get_agents_for_intent(self, intent: str) -> List[str]:
-        """Determine which agents to run for an intent."""
-        agent_flows = {
-            "refresh_inbox": ["triage", "safety", "email"],
-            "plan_day": ["planner", "safety"],
-            "handle_item": ["email", "event", "safety"],
-            "draft_reply": ["email", "safety"],
+    def _get_agent_sequence(self, intent: str) -> List[str]:
+        """Determine which agents to run based on intent."""
+        sequences = {
+            "refresh_inbox": ["triage", "safety", "email", "event"],
+            "plan_day": ["planner"],
+            "handle_item": ["triage", "email", "event"],
+            "learn_preferences": ["preference"],
         }
 
-        return agent_flows.get(intent, [])
+        return sequences.get(intent, ["triage"])
 
-    def _log_agent_run(self, user_id: str, agent_name: str, context: str, result: AgentResult):
-        """Log agent execution to database."""
-        log = AgentRunLog(
+    def _update_context(self, context: AgentContext, result: AgentResult):
+        """Update context with agent results."""
+        if result.metadata_updates:
+            for update in result.metadata_updates:
+                context.metadata.update(update)
+
+        if result.action_proposals:
+            if not hasattr(context, "action_proposals"):
+                context.action_proposals = []
+            context.action_proposals.extend(result.action_proposals)
+
+    def build_context(self, intent: str, items: List[Dict], user_id: str) -> AgentContext:
+        """Build initial context for orchestration."""
+        return AgentContext(
             user_id=user_id,
-            agent_name=agent_name,
-            context=context,
-            input_summary=result.output_summary.get("input", {}),
-            output_summary=result.output_summary,
-            status=result.status,
-            error_message=result.error_message,
-            duration_ms=result.duration_ms,
-            completed_at=datetime.utcnow(),
+            intent=intent,
+            items=items,
+            user_preferences={},
+            weather_context={},
+            metadata={},
+            action_proposals=[],
         )
-        self.db.add(log)
-        self.db.commit()
-
-    def _preferences_to_dict(self, preferences: UserPreferences) -> Dict:
-        """Convert UserPreferences to dict."""
-        return {
-            "quiet_hours_start": preferences.quiet_hours_start,
-            "quiet_hours_end": preferences.quiet_hours_end,
-            "preferred_work_blocks": preferences.preferred_work_blocks or [],
-            "email_tone": preferences.email_tone,
-            "meeting_preferences": preferences.meeting_preferences or {},
-            "auto_reject_high_risk": preferences.auto_reject_high_risk,
-            "enable_safety_agent": preferences.enable_safety_agent,
-        }
