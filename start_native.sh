@@ -31,7 +31,7 @@ alembic upgrade head
 
 echo ""
 echo "[3/4] Starting Backend API..."
-uvicorn backend.api.server:app --host 0.0.0.0 --port 8000 --reload > backend.log 2>&1 &
+uvicorn backend.api.server:app --host 0.0.0.0 --port 8001 --reload > backend.log 2>&1 &
 BACKEND_PID=$!
 echo "    Backend PID: $BACKEND_PID"
 sleep 3
@@ -55,9 +55,9 @@ echo "========================================="
 echo "  Personal Ops Center is running!"
 echo "========================================="
 echo ""
-echo "Frontend:  http://localhost:5173"
-echo "API:       http://localhost:8000"
-echo "API Docs:  http://localhost:8000/docs"
+echo "Frontend:  http://localhost:3001"
+echo "API:       http://localhost:8001"
+echo "API Docs:  http://localhost:8001/docs"
 echo ""
 echo "Logs:"
 echo "  tail -f backend.log"
