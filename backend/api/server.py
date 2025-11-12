@@ -12,6 +12,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from backend.api.routes import actions, inbox, planner, sync
+
 # Configure logging
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper())
 logger = logging.getLogger(__name__)
@@ -71,13 +73,11 @@ async def root() -> Dict[str, str]:
     return {"service": "Personal Ops Center API", "version": "0.1.0", "docs": "/docs", "health": "/health"}
 
 
-# TODO: Import and include routers
-# from backend.api.routes import auth, accounts, items, actions, orchestrator
-# app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-# app.include_router(accounts.router, prefix="/api/accounts", tags=["accounts"])
-# app.include_router(items.router, prefix="/api/items", tags=["items"])
-# app.include_router(actions.router, prefix="/api/action-proposals", tags=["actions"])
-# app.include_router(orchestrator.router, prefix="/api/orchestrator", tags=["orchestrator"])
+# Include API routers
+app.include_router(inbox.router, prefix="/api")
+app.include_router(planner.router, prefix="/api")
+app.include_router(actions.router, prefix="/api")
+app.include_router(sync.router, prefix="/api")
 
 
 @app.exception_handler(Exception)
