@@ -1,0 +1,21 @@
+.actions-view {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.actions-view h1 {
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #aaa;
+  margin-bottom: 2rem;
+}
+
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+

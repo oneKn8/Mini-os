@@ -1,0 +1,105 @@
+.today-view {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.today-header {
+  margin-bottom: 2rem;
+}
+
+.today-header h1 {
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.today-header .date {
+  color: #aaa;
+  font-size: 1.1rem;
+}
+
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.today-grid section {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.today-grid h2 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.must-do-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.must-do-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background-color: #252525;
+  border-radius: 6px;
+  color: #ddd;
+}
+
+.must-do-item input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.focus-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.focus-item {
+  padding: 0.75rem;
+  background-color: rgba(100, 108, 255, 0.1);
+  border-left: 3px solid #646cff;
+  border-radius: 6px;
+  color: #ddd;
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background-color: #252525;
+  border-radius: 6px;
+}
+
+.schedule-item .time {
+  color: #646cff;
+  font-weight: 600;
+  min-width: 60px;
+}
+
+.schedule-item .task {
+  flex: 1;
+  color: #ddd;
+}
+
+.schedule-item .duration {
+  color: #888;
+  font-size: 0.9rem;
+}
+
