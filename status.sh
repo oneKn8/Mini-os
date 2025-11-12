@@ -12,14 +12,14 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 echo "🐳 Docker Services:"
-docker-compose ps
+docker compose ps
 
 echo ""
 echo "🔍 Service Health:"
 echo ""
 
 # Check database
-if docker-compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
+if docker compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
     echo "✅ Database: Running"
 else
     echo "❌ Database: Not responding"

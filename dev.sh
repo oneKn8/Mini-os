@@ -41,7 +41,7 @@ echo ""
 
 # Start just the database in Docker
 echo "🐳 Starting database..."
-docker-compose up -d postgres
+docker compose up -d postgres
 
 echo "⏳ Waiting for database..."
 sleep 5
@@ -97,7 +97,7 @@ echo "$BACKEND_PID" > .dev.pid
 echo "$FRONTEND_PID" >> .dev.pid
 
 # Wait for user interrupt
-trap "echo ''; echo 'Stopping...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; docker-compose stop postgres; rm -f .dev.pid; exit" INT TERM
+trap "echo ''; echo 'Stopping...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; docker compose stop postgres; rm -f .dev.pid; exit" INT TERM
 
 echo "Press Ctrl+C to stop all services..."
 wait

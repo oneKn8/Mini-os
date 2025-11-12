@@ -26,7 +26,7 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 echo "🐳 Starting Docker services..."
-docker-compose up -d
+docker compose up -d
 
 echo ""
 echo "⏳ Waiting for database to be ready..."
@@ -36,7 +36,7 @@ sleep 5
 MAX_RETRIES=30
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker-compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
+    if docker compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
         echo "✅ Database is ready!"
         break
     fi
@@ -52,7 +52,7 @@ fi
 
 echo ""
 echo "🔄 Running database migrations..."
-docker-compose exec -T backend-api alembic upgrade head
+docker compose exec -T backend-api alembic upgrade head
 
 echo ""
 echo "========================================="
@@ -65,8 +65,8 @@ echo "📚 API Docs:  http://localhost:8000/docs"
 echo "💚 Health:    http://localhost:8000/health"
 echo ""
 echo "📊 View logs:"
-echo "   docker-compose logs -f backend-api"
-echo "   docker-compose logs -f frontend"
+echo "   docker compose logs -f backend-api"
+echo "   docker compose logs -f frontend"
 echo ""
 echo "🛑 To stop: ./stop.sh"
 echo ""

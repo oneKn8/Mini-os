@@ -812,6 +812,6 @@ For each flow, list:
 - What the user should see in the UI at each step.
 - Edge cases and failure modes I should test.
 
-No code, just a thorough step-by-step checklist I can use for final integration."
+
 
 ---
