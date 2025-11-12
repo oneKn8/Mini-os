@@ -223,16 +223,11 @@ Keep it architectural and step-by-step, no actual code. Include edge cases I sho
   - Allow Orchestrator to call agents by name.
   - Easy to extend with new agents later.
 
-Describe:
-- The responsibilities of the Orchestrator.
-- The agent interface and expected input/output structure.
-- How Orchestrator handles errors so the system fails gracefully (e.g., skip a failed agent but still return partial results).
-- Example flows (text only) for:
-  - `refresh_inbox`
-  - `plan_day`
-  - `handle_item`.
-
-Do not write code; just define the objects, responsibilities, and flows.”
+Implement:
+- The Orchestrator class with error handling
+- The agent interface (BaseAgent abstract class)
+- Agent registry
+- Example flows for refresh_inbox, plan_day, handle_item"
 
 ---
 
@@ -273,15 +268,12 @@ For each `Item`, the agent must:
   - Important entities (course codes, money amounts, university departments, etc.).
 - Assign a `confidence_score`.
 
-Describe in detail:
-- How to structure the prompt(s).
-- How to constrain output into a JSON-friendly structure.
-- How to handle ambiguous cases (e.g., lean towards medium importance).
-- How to integrate with the Orchestrator:
-  - Input: list of item ids
-  - Output: writes `ItemAgentMetadata` rows and returns a high-level summary for logging.
-
-No code, just clear specification of behavior, output schema, and error handling.”
+Implement:
+- TriageAgent class with LLM integration
+- JSON-constrained output parsing
+- Ambiguous case handling
+- Orchestrator integration
+- Database writes for ItemAgentMetadata
 
 ---
 
@@ -355,10 +347,11 @@ Responsibilities:
      - Simple tags/annotations on time ranges and events like `ok_for_outdoor`, `avoid_travel`, `heavy_rain`, etc.
    - These annotations should be stored in a way the Planner Agent can consume easily.
 
-Describe:
-- The input and output structures of each agent.
-- Example actions the Email and Event agents should propose.
-- How these agents plug into the Orchestrator (which intents trigger them and in what order).”
+Implement all three specialist agents with:
+- Input/output structures
+- LLM integration
+- Action proposal generation
+- Orchestrator integration"
 
 ---
 
@@ -411,13 +404,12 @@ Output:
 - A structured `PlanSummary` (ready to render in UI).
 - A list of `ActionProposals` (create/update calendar events for blocks/reminders) that can be shown in the ‘Pending Actions’ panel.
 
-Describe:
-- How the agent should rank and select tasks.
-- How it should respect quiet hours and preferences.
-- How to keep the plan **small and realistic**, not a massive to-do list.
-- The JSON-like structure for `PlanSummary` and suggested time blocks.
-
-No code, just behavior and output schema.”
+Implement:
+- PlannerAgent with task ranking logic
+- Quiet hours and preference handling
+- Realistic plan generation (3-5 items max)
+- PlanSummary and time block structures
+- ActionProposal generation for calendar blocks"
 
 ---
 
@@ -471,7 +463,7 @@ Describe:
   - How its outputs affect what the UI shows (badges, warnings).
 - How to make it conservative, favoring user safety over automation.
 
-No code, just detailed behavior and structured outputs.”
+Implement SafetyAgent with email scanning and action risk assessment.”
 
 ---
 
@@ -519,7 +511,7 @@ Describe:
 - How it should express these rules so other agents can consume them easily (structured config, not free-text).
 - How to avoid overfitting (e.g., not changing preferences after one data point).
 
-No code, just design and data shape.”
+Implement PreferenceAgent with signal processing and preference updates.”
 
 ---
 
@@ -761,7 +753,7 @@ Describe:
 - The status transitions of ActionProposal.
 - Logging expectations for debugging.
 
-No code, just precise behavior and state transitions.”
+Implement Action Executor with provider API calls and error handling.”
 
 ---
 
