@@ -118,7 +118,8 @@ temp/
 *.onnx
 *.pt
 *.pth
-models/
+# Ignore ML model files but not our code
+**/ml_models/
 checkpoints/
 
 # Docker
