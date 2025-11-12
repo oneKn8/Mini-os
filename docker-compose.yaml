@@ -27,7 +27,12 @@ services:
     container_name: ops-center-api
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ops_user}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-ops_center}
+      # AI Provider
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
       NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # App Config
       SECRET_KEY: ${SECRET_KEY}
       ENVIRONMENT: ${ENVIRONMENT:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

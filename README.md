@@ -25,7 +25,9 @@ A multi-agent AI system for managing emails, calendar events, and daily planning
 ### Prerequisites
 
 - Docker & Docker Compose
-- NVIDIA API Key (for NIM access)
+- AI Provider API Key:
+  - OpenAI API Key (recommended: GPT-4o-mini), OR
+  - NVIDIA NIM API Key (Llama 3 70B)
 
 ### Setup
 
@@ -40,7 +42,9 @@ cd multiagents
 
 ```bash
 cp env.example .env
-# Edit .env and add your NVIDIA_API_KEY
+# Edit .env and add your API key:
+# - For OpenAI: Set OPENAI_API_KEY and AI_PROVIDER=openai
+# - For NVIDIA: Set NVIDIA_API_KEY and AI_PROVIDER=nvidia
 ```
 
 3. Start services:

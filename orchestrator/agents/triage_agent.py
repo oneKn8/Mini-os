@@ -3,14 +3,12 @@ Triage Agent - Classifies and prioritizes items.
 """
 
 import json
-import os
 import time
 from datetime import datetime
 from typing import Dict, List
 
-import requests
-
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
+from orchestrator.llm_client import LLMClient
 
 
 class TriageAgent(BaseAgent):
@@ -18,9 +16,7 @@ class TriageAgent(BaseAgent):
 
     def __init__(self, name: str = "triage"):
         super().__init__(name)
-        self.api_key = os.getenv("NVIDIA_API_KEY")
-        self.model = "meta/llama3-70b-instruct"
-        self.api_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+        self.llm = LLMClient()
 
     async def run(self, context: AgentContext) -> AgentResult:
         """Triage items and generate metadata."""
