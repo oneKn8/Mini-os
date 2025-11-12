@@ -12,8 +12,13 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Load .env
-export $(cat .env | grep -v '^#' | xargs)
+set -a
+source .env
+set +a
+
+DB_PORT=${DOCKER_DB_PORT:-5643}
+API_PORT=${LOCAL_API_PORT:-8101}
+FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
 
 echo "[1/5] Starting PostgreSQL in Docker..."
 docker compose up -d postgres
@@ -41,12 +46,12 @@ fi
 
 echo ""
 echo "[3/5] Running database migrations..."
-export DATABASE_URL="postgresql://ops_user:ops_password@localhost:5432/ops_center"
+export DATABASE_URL="postgresql://ops_user:ops_password@localhost:${DB_PORT}/ops_center"
 alembic upgrade head
 
 echo ""
 echo "[4/5] Starting Backend API..."
-uvicorn backend.api.server:app --host 0.0.0.0 --port 8001 --reload > backend.log 2>&1 &
+uvicorn backend.api.server:app --host 0.0.0.0 --port "${API_PORT}" --reload > backend.log 2>&1 &
 BACKEND_PID=$!
 echo "    Backend PID: $BACKEND_PID"
 sleep 3
@@ -70,9 +75,9 @@ echo "========================================="
 echo "  Personal Ops Center is running!"
 echo "========================================="
 echo ""
-echo "Frontend:  http://localhost:3001"
-echo "API:       http://localhost:8001"
-echo "API Docs:  http://localhost:8001/docs"
+echo "Frontend:  http://localhost:${FRONTEND_PORT}"
+echo "API:       http://localhost:${API_PORT}"
+echo "API Docs:  http://localhost:${API_PORT}/docs"
 echo ""
 echo "Logs:"
 echo "  tail -f backend.log"

@@ -46,11 +46,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
-origins = [
-    "http://localhost:3000",  # React dev server
-    "http://localhost:8000",  # API docs
-]
+frontend_origin = os.getenv("FRONTEND_URL", "http://localhost:3101")
+origins = list(
+    dict.fromkeys(
+        [
+            frontend_origin,
+            "http://localhost:3101",  # default dev server
+            "http://localhost:3000",  # legacy port
+        ]
+    )
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -90,4 +95,4 @@ async def global_exception_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("backend.api.server:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    uvicorn.run("backend.api.server:app", host="0.0.0.0", port=8101, reload=True, log_level="info")

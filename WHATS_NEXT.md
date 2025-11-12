@@ -275,7 +275,7 @@ nano .env  # Add OPENAI_API_KEY
 ./start.sh
 
 # 3. Open browser
-open http://localhost:3000
+open http://localhost:3101
 
 # 4. Manual OAuth setup (one-time):
 # - Get Gmail OAuth credentials from Google Cloud Console
@@ -283,7 +283,7 @@ open http://localhost:3000
 # - Save in .env file
 
 # 5. Trigger sync
-curl -X POST http://localhost:8000/api/sync/trigger
+curl -X POST http://localhost:8101/api/sync/trigger
 
 # 6. Use it!
 ```
@@ -306,4 +306,3 @@ That's it! Everything else is optional enhancements for later.
 **Status**: PRODUCTION-READY FOUNDATION ✅
 
 You have a fully functional multi-agent AI system!
-

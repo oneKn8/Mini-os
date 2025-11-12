@@ -31,6 +31,16 @@ if [ ! -d "frontend/node_modules" ]; then
     cd ..
 fi
 
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+DB_PORT=${DOCKER_DB_PORT:-5643}
+API_PORT=${LOCAL_API_PORT:-8101}
+FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
+
 echo "🔧 Starting development mode..."
 echo ""
 echo "This will start:"
@@ -47,7 +57,7 @@ echo "⏳ Waiting for database..."
 sleep 5
 
 # Export environment variables
-export DATABASE_URL="postgresql://ops_user:ops_password@localhost:5432/ops_center"
+export DATABASE_URL="postgresql://ops_user:ops_password@localhost:${DB_PORT}/ops_center"
 export LOGLEVEL="DEBUG"
 
 # Run migrations
@@ -61,13 +71,13 @@ echo "========================================="
 echo ""
 
 # Start backend in background
-echo "🚀 Starting backend on http://localhost:8001..."
-uvicorn backend.api.server:app --reload --host 0.0.0.0 --port 8001 > backend.log 2>&1 &
+echo "🚀 Starting backend on http://localhost:${API_PORT}..."
+uvicorn backend.api.server:app --reload --host 0.0.0.0 --port "${API_PORT}" > backend.log 2>&1 &
 BACKEND_PID=$!
 echo "   Backend PID: $BACKEND_PID"
 
 # Start frontend in background
-echo "🚀 Starting frontend on http://localhost:3001..."
+echo "🚀 Starting frontend on http://localhost:${FRONTEND_PORT}..."
 cd frontend
 npm run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
@@ -79,9 +89,9 @@ echo "========================================="
 echo "  ✅ Development mode running!"
 echo "========================================="
 echo ""
-echo "🌐 Frontend:  http://localhost:3001"
-echo "🔧 API:       http://localhost:8001"
-echo "📚 API Docs:  http://localhost:8001/docs"
+echo "🌐 Frontend:  http://localhost:${FRONTEND_PORT}"
+echo "🔧 API:       http://localhost:${API_PORT}"
+echo "📚 API Docs:  http://localhost:${API_PORT}/docs"
 echo ""
 echo "📊 Logs:"
 echo "   Backend:  tail -f backend.log"
@@ -101,4 +111,3 @@ trap "echo ''; echo 'Stopping...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; 
 
 echo "Press Ctrl+C to stop all services..."
 wait
-

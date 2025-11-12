@@ -5,6 +5,14 @@ echo "  PostgreSQL Native Setup"
 echo "========================================="
 echo ""
 
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
+fi
+
+LOCAL_DB_PORT=${LOCAL_DB_PORT:-5543}
+
 # Install PostgreSQL if not already installed
 if ! command -v psql &> /dev/null; then
     echo "Installing PostgreSQL..."
@@ -44,5 +52,5 @@ echo "Database: ops_center"
 echo "User: ops_user"
 echo "Password: ops_password"
 echo "Host: localhost"
-echo "Port: 5432"
+echo "Port: ${LOCAL_DB_PORT}"
 echo ""

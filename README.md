@@ -60,9 +60,9 @@ docker-compose exec backend alembic upgrade head
 ```
 
 5. Access the application:
-   - Frontend: http://localhost:3000
-   - API Docs: http://localhost:8000/docs
-   - Health Check: http://localhost:8000/health
+   - Frontend: http://localhost:3101
+   - API Docs: http://localhost:8101/docs
+   - Health Check: http://localhost:8101/health
 
 ## Development
 

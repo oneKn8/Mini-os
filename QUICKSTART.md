@@ -44,8 +44,8 @@ Wait for services to start (~30 seconds).
 ## Step 5: Open The App
 
 Open in your browser:
-- **Frontend**: http://localhost:3000
-- **API Docs**: http://localhost:8000/docs
+- **Frontend**: http://localhost:3101
+- **API Docs**: http://localhost:8101/docs
 
 That's it! You're running!
 

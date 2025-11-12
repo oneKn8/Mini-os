@@ -25,6 +25,13 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+set -a
+source .env
+set +a
+
+API_PORT=${HOST_API_PORT:-8101}
+FRONTEND_PORT=${HOST_FRONTEND_PORT:-3101}
+
 echo "🐳 Starting Docker services..."
 docker compose up -d
 
@@ -59,10 +66,10 @@ echo "========================================="
 echo "  ✅ Personal Ops Center is running!"
 echo "========================================="
 echo ""
-echo "🌐 Frontend:  http://localhost:3001"
-echo "🔧 API:       http://localhost:8001"
-echo "📚 API Docs:  http://localhost:8001/docs"
-echo "💚 Health:    http://localhost:8001/health"
+echo "🌐 Frontend:  http://localhost:${FRONTEND_PORT}"
+echo "🔧 API:       http://localhost:${API_PORT}"
+echo "📚 API Docs:  http://localhost:${API_PORT}/docs"
+echo "💚 Health:    http://localhost:${API_PORT}/health"
 echo ""
 echo "📊 View logs:"
 echo "   docker compose logs -f backend-api"
@@ -71,8 +78,7 @@ echo ""
 echo "🛑 To stop: ./stop.sh"
 echo ""
 echo "🌐 URLs:"
-echo "   Frontend:  http://localhost:3001"
-echo "   API:       http://localhost:8001"
-echo "   API Docs:  http://localhost:8001/docs"
+echo "   Frontend:  http://localhost:${FRONTEND_PORT}"
+echo "   API:       http://localhost:${API_PORT}"
+echo "   API Docs:  http://localhost:${API_PORT}/docs"
 echo ""
-

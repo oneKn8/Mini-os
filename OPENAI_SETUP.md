@@ -257,7 +257,7 @@ A: Yes! You can modify `llm_client.py` to support Ollama, LM Studio, or any Open
 1. ✅ Set up API key
 2. ✅ Test with `test_openai.py`
 3. ✅ Start the system: `./start.sh`
-4. 🌐 Open http://localhost:3000
+4. 🌐 Open http://localhost:3101
 5. 📧 Connect your email accounts (OAuth)
 6. 🤖 Let the agents work for you!
 
@@ -273,4 +273,3 @@ Issues with OpenAI API? Check:
 For NVIDIA NIM issues:
 - NVIDIA Build: https://build.nvidia.com/
 - Our logs: `./logs.sh backend-api`
-

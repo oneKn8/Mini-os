@@ -148,7 +148,7 @@ docker-compose up -d
 docker-compose logs -f backend-api
 
 # Access API docs
-open http://localhost:8000/docs
+open http://localhost:8101/docs
 
 # Stop services
 docker-compose down
@@ -201,4 +201,3 @@ pytest tests/
 ---
 
 **Current Focus:** Complete Phase 1 (Data Model) SQLAlchemy models
-

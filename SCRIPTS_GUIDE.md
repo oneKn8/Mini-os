@@ -19,10 +19,10 @@ Start the entire system (database, backend, frontend) in Docker.
 - Shows service URLs
 
 **Access points after starting:**
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Health: http://localhost:8000/health
+- Frontend: http://localhost:3101
+- API: http://localhost:8101
+- API Docs: http://localhost:8101/docs
+- Health: http://localhost:8101/health
 
 ---
 
@@ -134,7 +134,7 @@ docker-compose stop postgres
    ```
 
 3. **Access the app:**
-   - Open http://localhost:3000
+   - Open http://localhost:3101
 
 ### Daily Development
 
@@ -164,7 +164,7 @@ tail -f frontend.log  # Watch frontend logs
 docker info
 
 # Check ports are free
-netstat -tuln | grep -E '3000|8000|5432'
+netstat -tuln | grep -E '3101|8101|5543|5643'
 
 # Clean restart
 ./stop.sh
@@ -358,14 +358,14 @@ services:
 docker-compose exec backend-api env
 
 # Test API
-curl http://localhost:8000/health
+curl http://localhost:8101/health
 ```
 
 For issues, check:
 1. Logs: `./logs.sh`
 2. Status: `./status.sh`
 3. Environment: `.env` file
-4. Ports: 3000, 8000, 5432 available
+4. Ports: 3101 (frontend), 8101 (API), 5543/5643 (Postgres) available
 5. Docker: daemon running
 
 ---
@@ -387,4 +387,3 @@ For issues, check:
 ./logs.sh     # Monitor
 ./stop.sh     # Evening
 ```
-

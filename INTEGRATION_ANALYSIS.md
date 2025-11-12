@@ -300,7 +300,7 @@ services:
     environment:
       REACT_APP_API_URL: http://backend-api:8000
     ports:
-      - "3000:3000"
+      - "3101:3000"
     depends_on:
       - backend-api
 ```
@@ -509,7 +509,7 @@ Based on patterns in `docker-compose.yaml`:
 
 ```bash
 # Core
-DATABASE_URL=postgresql://user:pass@localhost:5432/ops_center
+DATABASE_URL=postgresql://user:pass@localhost:5543/ops_center
 NVIDIA_API_KEY=nvapi-...
 
 # OAuth
@@ -549,4 +549,3 @@ The GenerativeAIExamples repository provides excellent patterns for:
 - Configuration management
 
 By adapting these patterns rather than starting from scratch, we can significantly accelerate development while maintaining production-ready quality.
-

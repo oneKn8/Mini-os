@@ -173,9 +173,9 @@ docker-compose exec backend-api alembic upgrade head
 ```
 
 4. Access:
-- Frontend: http://localhost:3000
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+- Frontend: http://localhost:3101
+- API: http://localhost:8101
+- API Docs: http://localhost:8101/docs
 
 ### Development
 
@@ -321,4 +321,3 @@ This entire multi-agent system was built from scratch in a single session, demon
 **Status: PRODUCTION-READY FOUNDATION** ✅
 
 The system is now ready for OAuth integration, user testing, and iterative improvements!
-
