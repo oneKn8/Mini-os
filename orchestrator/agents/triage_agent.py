@@ -56,24 +56,9 @@ class TriageAgent(BaseAgent):
         """Triage a single item using LLM."""
         prompt = self._build_triage_prompt(item)
 
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
-            "top_p": 0.7,
-            "max_tokens": 1024,
-        }
-
-        response = requests.post(self.api_url, headers=headers, json=payload)
-        response.raise_for_status()
-
-        result = response.json()
-        content = result["choices"][0]["message"]["content"]
-
-        # Parse JSON response
-        metadata = json.loads(content)
+        # Call LLM and parse JSON
+        response = self.llm.call(prompt, temperature=0.2, max_tokens=1024)
+        metadata = json.loads(response)
 
         return {
             "category": metadata.get("category", "other"),
