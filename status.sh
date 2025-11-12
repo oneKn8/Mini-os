@@ -26,17 +26,17 @@ else
 fi
 
 # Check backend API
-if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
-    echo "✅ Backend API: Running (http://localhost:8000)"
+if curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+    echo "✅ Backend API: Running (http://localhost:8001)"
 else
-    echo "❌ Backend API: Not responding (http://localhost:8000)"
+    echo "❌ Backend API: Not responding (http://localhost:8001)"
 fi
 
 # Check frontend
-if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-    echo "✅ Frontend: Running (http://localhost:3000)"
+if curl -sf http://localhost:3001 > /dev/null 2>&1; then
+    echo "✅ Frontend: Running (http://localhost:3001)"
 else
-    echo "❌ Frontend: Not responding (http://localhost:3000)"
+    echo "❌ Frontend: Not responding (http://localhost:3001)"
 fi
 
 echo ""

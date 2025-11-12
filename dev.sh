@@ -61,13 +61,13 @@ echo "========================================="
 echo ""
 
 # Start backend in background
-echo "🚀 Starting backend on http://localhost:8000..."
-uvicorn backend.api.server:app --reload --host 0.0.0.0 --port 8000 > backend.log 2>&1 &
+echo "🚀 Starting backend on http://localhost:8001..."
+uvicorn backend.api.server:app --reload --host 0.0.0.0 --port 8001 > backend.log 2>&1 &
 BACKEND_PID=$!
 echo "   Backend PID: $BACKEND_PID"
 
 # Start frontend in background
-echo "🚀 Starting frontend on http://localhost:3000..."
+echo "🚀 Starting frontend on http://localhost:3001..."
 cd frontend
 npm run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
@@ -79,9 +79,9 @@ echo "========================================="
 echo "  ✅ Development mode running!"
 echo "========================================="
 echo ""
-echo "🌐 Frontend:  http://localhost:3000"
-echo "🔧 API:       http://localhost:8000"
-echo "📚 API Docs:  http://localhost:8000/docs"
+echo "🌐 Frontend:  http://localhost:3001"
+echo "🔧 API:       http://localhost:8001"
+echo "📚 API Docs:  http://localhost:8001/docs"
 echo ""
 echo "📊 Logs:"
 echo "   Backend:  tail -f backend.log"
