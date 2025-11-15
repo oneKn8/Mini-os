@@ -5,18 +5,19 @@ Quick reference for all management scripts.
 ## Main Scripts
 
 ### 🚀 `./start.sh`
-Start the entire system (database, backend, frontend) in Docker.
+Start PostgreSQL (via systemd), run migrations, and launch the backend + frontend locally.
 
 ```bash
 ./start.sh
 ```
 
 **What it does:**
-- Checks for `.env` file (creates from template if missing)
-- Starts all Docker services
-- Waits for database to be ready
-- Runs database migrations
-- Shows service URLs
+- Ensures a `.env` file exists (creates one from `env.example` if needed)
+- Starts the local PostgreSQL service via `systemctl` if it's not running
+- Runs Alembic migrations against `postgresql://ops_user:ops_password@localhost:5543/ops_center`
+- Launches the FastAPI backend with `uvicorn` (logs to `backend.log`)
+- Launches the Vite dev server for the frontend (logs to `frontend.log`)
+- Stores process IDs in `.native.pid` for easy shutdown later
 
 **Access points after starting:**
 - Frontend: http://localhost:3101
@@ -27,20 +28,16 @@ Start the entire system (database, backend, frontend) in Docker.
 ---
 
 ### 🛑 `./stop.sh`
-Stop all services.
+Stop the uvicorn and Vite processes started by `./start.sh`.
 
 ```bash
 ./stop.sh
 ```
 
 **What it does:**
-- Stops all Docker containers
-- Preserves database data in volumes
-
-**To remove data:**
-```bash
-docker-compose down -v
-```
+- Reads `.native.pid` and kills the recorded backend/frontend processes
+- Falls back to `pkill` if the PID file is missing
+- Leaves PostgreSQL running (use `sudo systemctl stop postgresql` if you really need to stop the DB)
 
 ---
 
@@ -56,7 +53,7 @@ Equivalent to: `./stop.sh && ./start.sh`
 ---
 
 ### 📊 `./logs.sh`
-View service logs.
+View Docker service logs (use `backend.log` / `frontend.log` when running via `./start.sh`).
 
 ```bash
 # All services
@@ -73,7 +70,7 @@ Press `Ctrl+C` to exit.
 ---
 
 ### 🔍 `./status.sh`
-Check system status.
+Check Docker system status. (For native runs, hit `/health` and tail the local logs instead.)
 
 ```bash
 ./status.sh
@@ -138,12 +135,12 @@ docker-compose stop postgres
 
 ### Daily Development
 
-**Production-like (Docker):**
+**Everyday usage (native processes):**
 ```bash
 ./start.sh        # Start
-./logs.sh         # View logs
-./status.sh       # Check health
-./stop.sh         # Stop
+tail -f backend.log   # Backend logs
+tail -f frontend.log  # Frontend logs
+./stop.sh         # Stop backend/frontend
 ```
 
 **Development mode (hot reload):**
@@ -160,37 +157,37 @@ tail -f frontend.log  # Watch frontend logs
 ### Services won't start
 
 ```bash
-# Check Docker
-docker info
+# Make sure PostgreSQL is running
+sudo systemctl status postgresql
 
-# Check ports are free
-netstat -tuln | grep -E '3101|8101|5543|5643'
+# Kill any stuck processes
+./stop.sh
+pkill -f "uvicorn backend.api.server:app" 2>/dev/null || true
+pkill -f "vite" 2>/dev/null || true
 
 # Clean restart
-./stop.sh
-docker-compose down -v
 ./start.sh
 ```
 
 ### Database issues
 
 ```bash
-# Check database
-docker-compose exec postgres psql -U ops_user -d ops_center
+# Connect directly
+psql postgresql://ops_user:ops_password@localhost:5543/ops_center
 
-# Reset database
-docker-compose down -v
-./start.sh
+# Re-run migrations if needed
+alembic upgrade head
 ```
 
 ### Frontend not loading
 
 ```bash
-# Check frontend logs
-./logs.sh frontend
+# Check frontend log
+tail -f frontend.log
 
-# Rebuild frontend
-docker-compose up -d --build frontend
+# Restart frontend only
+pkill -f "vite"
+(cd frontend && npm run dev >> ../frontend.log 2>&1 &)
 ```
 
 ### Backend API errors

@@ -1,17 +1,9 @@
 #!/bin/bash
 
-echo "========================================="
-echo "  Stopping Personal Ops Center"
-echo "========================================="
-echo ""
+# Thin wrapper to keep existing workflows intact.
+# Delegates to the native stop script which knows how to
+# tear down the uvicorn/vite processes started by ./start.sh.
 
-echo "🛑 Stopping Docker services..."
-docker compose down
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo ""
-echo "✅ All services stopped!"
-echo ""
-echo "📝 Note: Database data is preserved in Docker volumes."
-echo "   To remove all data: docker compose down -v"
-echo ""
-
+exec "$SCRIPT_DIR/stop_native.sh" "$@"

@@ -16,9 +16,24 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+# Import after fileConfig to avoid logging config issues
+from backend.api.models.base import Base  # noqa: E402
+from backend.api.models import (  # noqa: E402, F401
+    User,
+    ConnectedAccount,
+    UserPreferences,
+    Item,
+    ItemAgentMetadata,
+    ActionProposal,
+    ExecutionLog,
+    PreferenceSignal,
+    AgentRunLog,
+    ChatSession,
+    ChatMessageEntry,
+)
+
+# Import all models so Alembic can detect them
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

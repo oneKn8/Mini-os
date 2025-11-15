@@ -39,7 +39,7 @@ You should see `[SUCCESS] ALL TESTS PASSED!`
 ./start.sh
 ```
 
-Wait for services to start (~30 seconds).
+> ℹ️ The script ensures PostgreSQL is running via `systemctl`, runs migrations, and then launches the backend/frontend. You might be prompted for your sudo password when PostgreSQL starts.
 
 ## Step 5: Open The App
 
@@ -77,7 +77,9 @@ That's it! You're running!
 **Services won't start?**
 ```bash
 ./stop.sh
-docker-compose down -v
+pkill -f "uvicorn backend.api.server:app" 2>/dev/null || true
+pkill -f "vite" 2>/dev/null || true
+sudo systemctl restart postgresql
 ./start.sh
 ```
 

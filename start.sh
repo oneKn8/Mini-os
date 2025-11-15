@@ -1,84 +1,72 @@
 #!/bin/bash
 
-set -e
-
 echo "========================================="
-echo "  Starting Personal Ops Center"
+echo "  Starting Personal Ops Center (NATIVE)"
 echo "========================================="
 echo ""
 
 # Check if .env file exists
 if [ ! -f .env ]; then
-    echo "⚠️  Warning: .env file not found!"
-    echo "Creating .env from env.example..."
-    cp env.example .env
-    echo ""
-    echo "⚠️  IMPORTANT: Edit .env and add your NVIDIA_API_KEY before continuing!"
-    echo "Press Enter to continue or Ctrl+C to exit..."
-    read
-fi
-
-# Check if Docker is running
-if ! docker info > /dev/null 2>&1; then
-    echo "❌ Error: Docker is not running!"
-    echo "Please start Docker and try again."
+    echo "[ERROR] .env file not found!"
+    echo "Run: cp env.example .env"
     exit 1
 fi
 
+# Load .env
 set -a
 source .env
 set +a
 
-API_PORT=${HOST_API_PORT:-8101}
-FRONTEND_PORT=${HOST_FRONTEND_PORT:-3101}
+DB_PORT=${LOCAL_DB_PORT:-5543}
+API_PORT=${LOCAL_API_PORT:-8101}
+FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
 
-echo "🐳 Starting Docker services..."
-docker compose up -d
-
-echo ""
-echo "⏳ Waiting for database to be ready..."
-sleep 5
-
-# Wait for database to be healthy
-MAX_RETRIES=30
-RETRY_COUNT=0
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
-        echo "✅ Database is ready!"
-        break
-    fi
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    echo "   Waiting for database... ($RETRY_COUNT/$MAX_RETRIES)"
-    sleep 2
-done
-
-if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    echo "❌ Database failed to start in time!"
-    exit 1
+echo "[1/4] Checking PostgreSQL..."
+if ! sudo systemctl is-active --quiet postgresql; then
+    echo "Starting PostgreSQL service..."
+    sudo systemctl start postgresql
 fi
+echo "[OK] PostgreSQL is running"
 
 echo ""
-echo "🔄 Running database migrations..."
-docker compose exec -T backend-api alembic upgrade head
+echo "[2/4] Running database migrations..."
+export DATABASE_URL="postgresql://ops_user:ops_password@localhost:${DB_PORT}/ops_center"
+alembic upgrade head
+
+echo ""
+echo "[3/4] Starting Backend API..."
+uvicorn backend.api.server:app --host 0.0.0.0 --port "${API_PORT}" --reload > backend.log 2>&1 &
+BACKEND_PID=$!
+echo "    Backend PID: $BACKEND_PID"
+sleep 3
+
+echo ""
+echo "[4/4] Starting Frontend..."
+cd frontend
+npm run dev > ../frontend.log 2>&1 &
+FRONTEND_PID=$!
+cd ..
+echo "    Frontend PID: $FRONTEND_PID"
+
+# Save PIDs
+echo "$BACKEND_PID" > .native.pid
+echo "$FRONTEND_PID" >> .native.pid
+
+sleep 3
 
 echo ""
 echo "========================================="
-echo "  ✅ Personal Ops Center is running!"
+echo "  Personal Ops Center is running!"
 echo "========================================="
 echo ""
-echo "🌐 Frontend:  http://localhost:${FRONTEND_PORT}"
-echo "🔧 API:       http://localhost:${API_PORT}"
-echo "📚 API Docs:  http://localhost:${API_PORT}/docs"
-echo "💚 Health:    http://localhost:${API_PORT}/health"
+echo "Frontend:  http://localhost:${FRONTEND_PORT}"
+echo "API:       http://localhost:${API_PORT}"
+echo "API Docs:  http://localhost:${API_PORT}/docs"
 echo ""
-echo "📊 View logs:"
-echo "   docker compose logs -f backend-api"
-echo "   docker compose logs -f frontend"
+echo "Logs:"
+echo "  tail -f backend.log"
+echo "  tail -f frontend.log"
 echo ""
-echo "🛑 To stop: ./stop.sh"
-echo ""
-echo "🌐 URLs:"
-echo "   Frontend:  http://localhost:${FRONTEND_PORT}"
-echo "   API:       http://localhost:${API_PORT}"
-echo "   API Docs:  http://localhost:${API_PORT}/docs"
+echo "To stop:"
+echo "  ./stop.sh"
 echo ""

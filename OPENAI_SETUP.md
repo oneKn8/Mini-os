@@ -25,7 +25,7 @@ OPENAI_MODEL=gpt-4o-mini
 ### 3. Test the integration
 
 ```bash
-# Install dependencies first (if not using Docker)
+# Install dependencies first (if you haven't already)
 pip install -r requirements.txt
 
 # Run the test script
@@ -89,7 +89,7 @@ Get NVIDIA API key from: https://build.nvidia.com/
 
 You can switch between providers anytime:
 
-### In Docker:
+### Using `./start.sh`:
 
 Edit `.env`:
 ```bash
