@@ -1,6 +1,7 @@
 import { SendMessageRequest, SendMessageResponse, ChatMessage } from '../types/chat'
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8001'
+// Use relative URLs to go through Vite proxy, or use env variable if set
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || ''
 
 const SESSION_STORAGE_KEY = 'ops-center-chat-session'
 
