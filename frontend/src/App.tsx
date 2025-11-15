@@ -5,6 +5,7 @@ import InboxView from './pages/InboxView'
 import PlannerView from './pages/PlannerView'
 import ActionsView from './pages/ActionsView'
 import SettingsView from './pages/SettingsView'
+import ChatView from './pages/ChatView'
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="actions" element={<ActionsView />} />
           <Route path="settings" element={<SettingsView />} />
         </Route>
+        <Route path="/chat" element={<ChatView />} />
       </Routes>
     </BrowserRouter>
   )

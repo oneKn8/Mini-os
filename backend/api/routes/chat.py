@@ -245,7 +245,7 @@ class ChatService:
         if handler:
             return await handler(intent_match, db, context)
 
-        return await self._handle_general(intent_match)
+        return await self._handle_general(message, intent_match, db, context)
 
     async def _handle_plan_day(
         self, intent: IntentMatch, db: Session, context: Optional[Dict[str, Any]]
@@ -343,12 +343,32 @@ class ChatService:
         )
         return message, {"intent": "help"}
 
-    async def _handle_general(self, intent: IntentMatch):
-        message = (
-            "I'm ready to assist. Ask me to plan your day, refresh the inbox, or show pending actions "
-            "whenever you need to run the agents."
-        )
-        return message, {"intent": intent.intent, "reason": intent.reason}
+    async def _handle_general(
+        self, user_message: str, intent: IntentMatch, db: Session, context: Optional[Dict[str, Any]] = None
+    ):
+        """Handle general queries using LLM for intelligent responses."""
+        try:
+            llm_client = LLMClient()
+
+            # Build context-aware prompt
+            system_context = (
+                "You are a helpful AI assistant for a personal productivity system. "
+                "You can help with planning, inbox management, answering questions about weather, "
+                "and general assistance. Be concise, helpful, and friendly."
+            )
+
+            prompt = f"{system_context}\n\nUser question: {user_message}\n\nProvide a helpful response:"
+
+            response = llm_client.call(prompt, temperature=0.7, max_tokens=500)
+
+            return response.strip(), {"intent": "general", "llm_response": True}
+        except Exception as exc:
+            logger.warning("LLM general query failed, falling back to default: %s", exc)
+            message = (
+                "I'm ready to assist. Ask me to plan your day, refresh the inbox, or show pending actions "
+                "whenever you need to run the agents."
+            )
+            return message, {"intent": intent.intent, "reason": intent.reason}
 
     def _get_orchestrator(self) -> Orchestrator:
         if self._orchestrator is None:
