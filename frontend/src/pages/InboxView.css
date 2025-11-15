@@ -30,18 +30,23 @@
 
 .sync-button {
   padding: 0.875rem 1.5rem;
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-weight: 500;
   color: var(--color-text-primary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-medium);
   transition: all var(--transition-base);
+  cursor: pointer;
 }
 
 .sync-button:hover {
-  background: rgba(102, 126, 234, 0.2);
-  transform: translateY(-2px);
+  background: var(--color-bg-secondary);
+  border-color: var(--color-border-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Filters */
@@ -53,26 +58,27 @@
 
 .filter-btn {
   padding: 0.625rem 1.25rem;
-  background: rgba(26, 31, 46, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-weight: 500;
   font-size: 0.875rem;
   transition: all var(--transition-base);
   text-transform: capitalize;
+  cursor: pointer;
 }
 
 .filter-btn:hover {
-  border-color: rgba(102, 126, 234, 0.5);
+  border-color: var(--color-border-dark);
   color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
 }
 
 .filter-btn.active {
-  background: var(--gradient-primary);
+  background: var(--color-accent-primary);
   color: white;
-  border-color: transparent;
-  box-shadow: var(--shadow-glow);
+  border-color: var(--color-accent-primary);
 }
 
 /* Content Layout */
@@ -94,33 +100,39 @@
 
 /* Inbox Items */
 .inbox-item {
-  padding: 1.5rem;
-  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
   display: flex;
   gap: 1rem;
   cursor: pointer;
   transition: all var(--transition-base);
-  animation: scaleIn 0.3s ease-out backwards;
+  animation: slideIn 0.2s ease-out backwards;
   position: relative;
+  box-shadow: var(--shadow-xs);
 }
 
 .inbox-item.unread {
-  background: rgba(102, 126, 234, 0.05);
+  background: var(--color-surface);
+  border-left: 3px solid var(--color-accent-primary);
 }
 
 .inbox-item:hover {
-  background: rgba(26, 31, 46, 0.9);
+  border-color: var(--color-border-medium);
+  box-shadow: var(--shadow-sm);
 }
 
 .inbox-item.selected {
-  background: rgba(102, 126, 234, 0.15);
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-color: var(--color-accent-primary);
+  box-shadow: 0 0 0 2px rgba(76, 110, 245, 0.1);
 }
 
 .item-indicator {
   width: 4px;
   border-radius: var(--radius-full);
   flex-shrink: 0;
+  background: var(--color-accent-primary);
 }
 
 .item-content {
@@ -157,7 +169,6 @@
   height: 6px;
   background: var(--color-accent-primary);
   border-radius: 50%;
-  box-shadow: 0 0 8px var(--color-accent-primary);
 }
 
 .timestamp {
@@ -201,11 +212,11 @@
 
 .label {
   padding: 0.25rem 0.75rem;
-  background: rgba(102, 126, 234, 0.15);
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-full);
   font-size: 0.75rem;
-  color: var(--color-accent-primary);
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
@@ -216,9 +227,12 @@
   top: 2.5rem;
   bottom: 2.5rem;
   width: 500px;
-  border-radius: var(--radius-xl);
-  padding: 2rem;
-  animation: slideIn 0.3s ease-out;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+  animation: slideIn 0.2s ease-out;
   overflow-y: auto;
   z-index: 50;
 }
@@ -241,16 +255,19 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
   transition: all var(--transition-base);
+  cursor: pointer;
 }
 
 .close-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-medium);
   color: var(--color-text-primary);
 }
 
@@ -259,7 +276,7 @@
   flex-direction: column;
   gap: 0.5rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--color-border-light);
   margin-bottom: 1.5rem;
 }
 

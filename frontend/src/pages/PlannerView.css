@@ -19,26 +19,28 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1.5rem;
-  background: rgba(26, 31, 46, 0.6);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-md);
 }
 
 .week-nav-button {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--color-text-secondary);
   transition: all var(--transition-base);
+  cursor: pointer;
 }
 
 .week-nav-button:hover {
-  background: rgba(102, 126, 234, 0.2);
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-medium);
   color: var(--color-text-primary);
 }
 
@@ -51,10 +53,13 @@
 
 /* Coming Soon */
 .coming-soon {
-  padding: 4rem 3rem;
-  border-radius: var(--radius-xl);
+  padding: 3rem 2rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
   text-align: center;
-  animation: scaleIn 0.5s ease-out;
+  animation: slideIn 0.3s ease-out;
+  box-shadow: var(--shadow-xs);
 }
 
 .coming-soon-icon {
@@ -67,10 +72,7 @@
   font-size: 2rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--color-text-primary);
 }
 
 .coming-soon p {
@@ -99,7 +101,7 @@
   content: '✓';
   width: 24px;
   height: 24px;
-  background: var(--gradient-success);
+  background: var(--color-accent-success);
   border-radius: 50%;
   display: flex;
   align-items: center;

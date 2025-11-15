@@ -1,15 +1,14 @@
 .inbox-card {
-  background-color: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
   padding: 1.25rem;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
 }
 
 .inbox-card:hover {
-  border-color: #646cff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.1);
+  border-color: var(--color-border-medium);
+  box-shadow: var(--shadow-sm);
 }
 
 .card-header {
@@ -17,65 +16,87 @@
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .importance-badge {
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: #fff;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.importance-badge.high {
+  background: var(--color-status-error-bg);
+  color: var(--color-status-error-text);
+}
+
+.importance-badge.medium {
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-text);
+}
+
+.importance-badge.low {
+  background: var(--color-status-info-bg);
+  color: var(--color-status-info-text);
 }
 
 .category-badge {
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  background-color: #333;
-  color: #aaa;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
 }
 
 .due-date {
   margin-left: auto;
-  font-size: 0.85rem;
-  color: #ff9944;
+  font-size: var(--font-size-sm);
+  color: var(--color-accent-warning);
+  font-weight: var(--font-weight-medium);
 }
 
 .card-title {
-  color: #fff;
+  color: var(--color-text-primary);
   margin-bottom: 0.5rem;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
 }
 
 .card-preview {
-  color: #aaa;
-  line-height: 1.5;
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
   margin-bottom: 1rem;
+  font-size: var(--font-size-sm);
 }
 
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.85rem;
-  color: #888;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
 }
 
 .sender {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
 }
 
 .suggested-action {
   margin-top: 1rem;
   padding: 0.75rem;
-  background-color: rgba(100, 108, 255, 0.1);
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #aaa;
+  background: var(--color-status-info-bg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .suggested-action strong {
-  color: #646cff;
+  color: var(--color-accent-primary);
+  font-weight: var(--font-weight-semibold);
 }
-

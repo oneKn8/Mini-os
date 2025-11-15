@@ -86,7 +86,7 @@ function InboxView() {
     <div className="inbox-view fade-in">
       <div className="inbox-header">
         <div className="header-top">
-          <h1 className="page-title gradient-text">Inbox</h1>
+          <h1 className="page-title">Inbox</h1>
           <button className="sync-button glass">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path
@@ -117,7 +117,7 @@ function InboxView() {
           {filteredItems.map((item, index) => (
             <div
               key={item.id}
-              className={`inbox-item glass hover-lift ${item.read ? 'read' : 'unread'} ${
+              className={`inbox-item ${item.read ? 'read' : 'unread'} ${
                 selectedItem?.id === item.id ? 'selected' : ''
               }`}
               style={{ animationDelay: `${index * 50}ms` }}

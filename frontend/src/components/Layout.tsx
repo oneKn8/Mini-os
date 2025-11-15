@@ -1,6 +1,7 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import './Layout.css'
+import ChatAssistant from './ChatAssistant/ChatAssistant'
 
 function Layout() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -109,6 +110,8 @@ function Layout() {
       <main className="main-content">
         <Outlet />
       </main>
+
+      <ChatAssistant />
     </div>
   )
 }

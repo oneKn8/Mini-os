@@ -1,6 +1,7 @@
 # Core Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+starlette==0.27.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
@@ -46,4 +47,3 @@ structlog==23.2.0
 opentelemetry-api==1.21.0
 opentelemetry-sdk==1.21.0
 opentelemetry-exporter-otlp==1.21.0
-

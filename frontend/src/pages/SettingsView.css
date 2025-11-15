@@ -17,9 +17,12 @@
 }
 
 .settings-section {
-  padding: 2rem;
-  border-radius: var(--radius-xl);
-  animation: scaleIn 0.4s ease-out backwards;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-light);
+  animation: slideIn 0.2s ease-out backwards;
+  box-shadow: var(--shadow-xs);
 }
 
 .settings-section:nth-child(1) {
@@ -37,7 +40,7 @@
 .section-header {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .section-header h2 {
@@ -58,15 +61,15 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   transition: all var(--transition-base);
 }
 
 .account-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-medium);
 }
 
 .account-info {
@@ -83,20 +86,19 @@
   align-items: center;
   justify-content: center;
   font-size: 1.5rem;
-  background: var(--gradient-primary);
-  box-shadow: var(--shadow-md);
+  background: var(--color-accent-primary);
 }
 
 .account-icon.gmail {
-  background: linear-gradient(135deg, #ea4335 0%, #fbbc05 100%);
+  background: #ea4335;
 }
 
 .account-icon.outlook {
-  background: linear-gradient(135deg, #0078d4 0%, #50e6ff 100%);
+  background: #0078d4;
 }
 
 .account-icon.calendar {
-  background: linear-gradient(135deg, #34a853 0%, #a5d6a7 100%);
+  background: #34a853;
 }
 
 .account-name {
@@ -113,18 +115,21 @@
 
 .connect-button {
   padding: 0.625rem 1.5rem;
-  background: var(--gradient-primary);
+  background: var(--color-accent-primary);
   color: white;
-  border-radius: var(--radius-full);
+  border: 1px solid var(--color-accent-primary);
+  border-radius: var(--radius-md);
   font-weight: 500;
   font-size: 0.875rem;
   transition: all var(--transition-base);
-  box-shadow: var(--shadow-md);
+  cursor: pointer;
 }
 
 .connect-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  background: var(--color-accent-primary-hover);
+  border-color: var(--color-accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Preference Items */
@@ -133,7 +138,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.25rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--color-border-light);
   gap: 2rem;
 }
 
@@ -161,8 +166,8 @@
 
 .preference-select {
   padding: 0.625rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-medium);
   border-radius: var(--radius-md);
   color: var(--color-text-primary);
   font-family: inherit;
@@ -174,8 +179,8 @@
 }
 
 .preference-select:hover {
-  border-color: rgba(102, 126, 234, 0.5);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--color-border-dark);
+  background: var(--color-bg-tertiary);
 }
 
 .preference-select:focus {
@@ -185,8 +190,8 @@
 
 .preference-value {
   padding: 0.625rem 1rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
   font-size: 0.9375rem;
@@ -203,7 +208,7 @@
     align-items: flex-start;
     gap: 1rem;
   }
-  
+
   .preference-select,
   .preference-value,
   .connect-button {

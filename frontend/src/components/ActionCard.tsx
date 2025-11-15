@@ -23,17 +23,11 @@ function ActionCard({ action }: Props) {
     },
   })
 
-  const riskColor = {
-    low: '#88dd44',
-    medium: '#ffdd44',
-    high: '#ff4444',
-  }
-
   return (
     <div className="action-card">
       <div className="action-header">
         <span className="agent-badge">{action.agent_name}</span>
-        <span className="risk-badge" style={{ backgroundColor: riskColor[action.risk_level] }}>
+        <span className={`risk-badge ${action.risk_level}`}>
           {action.risk_level} risk
         </span>
       </div>

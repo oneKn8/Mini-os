@@ -103,7 +103,7 @@ function ActionsView() {
   return (
     <div className="actions-view fade-in">
       <div className="actions-header">
-        <h1 className="page-title gradient-text">Proposed Actions</h1>
+        <h1 className="page-title">Proposed Actions</h1>
         <div className="filters">
           <button
             className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
@@ -124,7 +124,7 @@ function ActionsView() {
         {filteredActions.map((action, index) => (
           <div
             key={action.id}
-            className={`action-card glass hover-lift ${action.status}`}
+            className={`action-card ${action.status}`}
             style={{ animationDelay: `${index * 80}ms` }}
           >
             <div className="action-header">

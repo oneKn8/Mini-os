@@ -84,18 +84,18 @@ function TodayView() {
     }
   }
 
-  const getTypeGradient = (type: string) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
       case "focus":
-        return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        return 'var(--color-accent-primary)'
       case "meeting":
-        return 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+        return 'var(--color-accent-secondary)'
       case "break":
-        return 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+        return 'var(--color-accent-info)'
       case "task":
-        return 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+        return 'var(--color-accent-success)'
       default:
-        return 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        return 'var(--color-accent-primary)'
     }
   }
 
@@ -161,7 +161,7 @@ function TodayView() {
                 className="priority-card glass hover-lift"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
-                <div className="priority-number" style={{ background: getTypeGradient("focus") }}>
+                <div className="priority-number" style={{ background: getTypeColor("focus") }}>
                   {index + 1}
                 </div>
                 <p className="priority-text">{priority}</p>
@@ -182,10 +182,10 @@ function TodayView() {
             {plan.time_blocks.map((block, index) => (
               <div
                 key={block.id}
-                className={`time-block glass hover-lift ${block.completed ? 'completed' : ''}`}
+                className={`time-block ${block.completed ? 'completed' : ''}`}
                 style={{ animationDelay: `${index * 80}ms` }}
               >
-                <div className="block-indicator" style={{ background: getTypeGradient(block.type) }}></div>
+                <div className="block-indicator" style={{ background: getTypeColor(block.type) }}></div>
                 <div className="block-content">
                   <div className="block-header">
                     <div className="block-time">{block.time}</div>
