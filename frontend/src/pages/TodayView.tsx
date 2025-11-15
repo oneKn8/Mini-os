@@ -158,7 +158,7 @@ function TodayView() {
             {plan.priorities.map((priority, index) => (
               <div
                 key={index}
-                className="priority-card glass hover-lift"
+                className="priority-card"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 <div className="priority-number" style={{ background: getTypeColor("focus") }}>

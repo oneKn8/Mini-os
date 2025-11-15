@@ -70,18 +70,18 @@ function ActionsView() {
     return icons[type] || 'Action'
   }
 
-  const getTypeGradient = (type: string) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
       case 'email_reply':
-        return 'var(--gradient-primary)'
+        return 'var(--color-accent-primary)'
       case 'calendar_event':
-        return 'var(--gradient-warning)'
+        return 'var(--color-accent-secondary)'
       case 'task_create':
-        return 'var(--gradient-success)'
+        return 'var(--color-accent-success)'
       case 'reminder':
-        return 'var(--gradient-secondary)'
+        return 'var(--color-accent-warning)'
       default:
-        return 'var(--gradient-primary)'
+        return 'var(--color-accent-primary)'
     }
   }
 
@@ -128,7 +128,7 @@ function ActionsView() {
             style={{ animationDelay: `${index * 80}ms` }}
           >
             <div className="action-header">
-              <div className="action-type" style={{ background: getTypeGradient(action.type) }}>
+              <div className="action-type" style={{ background: getTypeColor(action.type) }}>
                 <span className="type-icon">{getTypeIcon(action.type).charAt(0)}</span>
               </div>
               <div className="confidence-badge">

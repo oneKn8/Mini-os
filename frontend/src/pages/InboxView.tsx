@@ -87,7 +87,7 @@ function InboxView() {
       <div className="inbox-header">
         <div className="header-top">
           <h1 className="page-title">Inbox</h1>
-          <button className="sync-button glass">
+          <button className="sync-button">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
