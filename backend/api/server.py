@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.routes import actions, inbox, planner, sync
+from backend.api.routes import actions, chat, inbox, planner, sync
 
 # Configure logging
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper())
@@ -83,6 +83,7 @@ app.include_router(inbox.router, prefix="/api")
 app.include_router(planner.router, prefix="/api")
 app.include_router(actions.router, prefix="/api")
 app.include_router(sync.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
 
 
 @app.exception_handler(Exception)

@@ -5,9 +5,15 @@ Multi-agent orchestrator
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Dict, List
 
-from orchestrator.agents.base import AgentContext, AgentResult
+from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
+from orchestrator.agents.email_agent import EmailAgent
+from orchestrator.agents.event_agent import EventAgent
+from orchestrator.agents.planner_agent import PlannerAgent
+from orchestrator.agents.preference_agent import PreferenceAgent
+from orchestrator.agents.safety_agent import SafetyAgent
+from orchestrator.agents.triage_agent import TriageAgent
 from orchestrator.registry import AgentRegistry
 
 logger = logging.getLogger(__name__)
@@ -28,6 +34,7 @@ class Orchestrator:
 
     def __init__(self):
         self.registry = AgentRegistry()
+        self._register_default_agents()
 
     async def run(self, intent: str, context: AgentContext) -> OrchestrationResult:
         """Execute agent chain for the given intent."""
@@ -95,3 +102,18 @@ class Orchestrator:
             metadata={},
             action_proposals=[],
         )
+
+    def _register_default_agents(self):
+        """Register built-in agents so they are available for orchestration."""
+        default_agents: Dict[str, BaseAgent] = {
+            "triage": TriageAgent(),
+            "safety": SafetyAgent(),
+            "email": EmailAgent(),
+            "event": EventAgent(),
+            "planner": PlannerAgent(),
+            "preference": PreferenceAgent(),
+        }
+
+        for name, agent in default_agents.items():
+            if not self.registry.is_registered(name):
+                self.registry.register(name, agent)
