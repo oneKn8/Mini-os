@@ -36,40 +36,92 @@ Personal Ops Center is a production-ready multi-agent AI system that automates e
 
 ### Multi-Agent System
 
-| Agent | Purpose | Capabilities |
-|-------|---------|--------------|
-| **Triage Agent** | Classification & Prioritization | Categorizes emails, assigns importance, extracts deadlines |
-| **Email Agent** | Content Generation | Summarizes emails, drafts replies, respects tone preferences |
-| **Event Agent** | Calendar Management | Extracts events, proposes calendar entries, detects deadlines |
-| **Planner Agent** | Daily Planning | Generates time blocks, suggests focus areas, considers context |
-| **Safety Agent** | Security & Risk | Detects phishing, assesses action risks, flags suspicious content |
-| **Preference Agent** | Learning & Adaptation | Learns from feedback, updates preferences, improves recommendations |
+```mermaid
+mindmap
+  root((Personal Ops Center))
+    Triage Agent
+      Classification
+      Prioritization
+      Deadline Extraction
+      Action Suggestions
+    Email Agent
+      Summarization
+      Draft Generation
+      Tone Adaptation
+      Key Points Extraction
+    Event Agent
+      Calendar Extraction
+      Event Proposals
+      Deadline Detection
+      Meeting Scheduling
+    Planner Agent
+      Daily Plans
+      Time Blocks
+      Focus Areas
+      Context Awareness
+    Safety Agent
+      Phishing Detection
+      Scam Prevention
+      Risk Assessment
+      Content Flagging
+    Preference Agent
+      Feedback Learning
+      Preference Updates
+      Pattern Recognition
+      Auto-Tuning
+```
 
 ### Technology Stack
 
-**Frontend**
-- React 18 with TypeScript
-- Vite for fast development
-- Modern, minimalist UI design
-- Responsive and accessible
-
-**Backend**
-- FastAPI with async/await
-- SQLAlchemy ORM
-- Alembic migrations
-- RESTful API design
-
-**AI & Orchestration**
-- LangChain for LLM integration
-- LangGraph for multi-agent workflows
-- Support for OpenAI and NVIDIA NIM
-- State-based agent coordination
-
-**Database**
-- PostgreSQL
-- JSONB for flexible metadata
-- Optimized indexes
-- Full-text search support
+```mermaid
+graph TD
+    subgraph Frontend_Stack["Frontend Stack"]
+        React[React 18]
+        TS[TypeScript]
+        Vite[Vite]
+        UI[Modern UI]
+        React --> TS
+        TS --> Vite
+        Vite --> UI
+    end
+    
+    subgraph Backend_Stack["Backend Stack"]
+        FastAPI[FastAPI]
+        SQLAlchemy[SQLAlchemy ORM]
+        Alembic[Alembic Migrations]
+        REST[RESTful API]
+        FastAPI --> SQLAlchemy
+        SQLAlchemy --> Alembic
+        FastAPI --> REST
+    end
+    
+    subgraph AI_Stack["AI & Orchestration Stack"]
+        LangChain[LangChain]
+        LangGraph[LangGraph]
+        OpenAI_Stack[OpenAI API]
+        NVIDIA_Stack[NVIDIA NIM]
+        State[State Management]
+        LangChain --> LangGraph
+        LangGraph --> State
+        LangChain --> OpenAI_Stack
+        LangChain --> NVIDIA_Stack
+    end
+    
+    subgraph Database_Stack["Database Stack"]
+        PostgreSQL[(PostgreSQL)]
+        JSONB[JSONB Metadata]
+        Indexes[Optimized Indexes]
+        FTS[Full-Text Search]
+        PostgreSQL --> JSONB
+        PostgreSQL --> Indexes
+        PostgreSQL --> FTS
+    end
+    
+    Frontend_Stack --> Backend_Stack
+    Backend_Stack --> AI_Stack
+    Backend_Stack --> Database_Stack
+    AI_Stack --> Database_Stack
+```
 
 ---
 
@@ -158,65 +210,174 @@ npm run dev  # Runs on http://localhost:3001
 
 ### System Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Frontend (React)                       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  Today   │  │  Inbox   │  │ Planner  │  │   Chat   │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-└──────────────────────┬────────────────────────────────────┘
-                       │ HTTP/REST
-┌──────────────────────▼────────────────────────────────────┐
-│              Backend API (FastAPI)                         │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  Inbox   │  │ Planner  │  │ Actions  │  │   Sync   │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-└──────────────────────┬────────────────────────────────────┘
-                       │
-┌──────────────────────▼────────────────────────────────────┐
-│         Orchestrator (LangGraph)                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │  Triage  │  │  Email   │  │  Event   │  │ Planner  │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-│  ┌──────────┐  ┌──────────┐                              │
-│  │  Safety  │  │Preference│                              │
-│  └──────────┘  └──────────┘                              │
-└──────────────────────┬────────────────────────────────────┘
-                       │
-┌──────────────────────▼────────────────────────────────────┐
-│         LLM Client (LangChain)                             │
-│  ┌──────────┐              ┌──────────┐                   │
-│  │  OpenAI  │              │  NVIDIA  │                   │
-│  └──────────┘              └──────────┘                   │
-└────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["Frontend Layer (React + TypeScript)"]
+        Today[Today View]
+        Inbox[Inbox View]
+        Planner[Planner View]
+        Chat[Chat Assistant]
+        Actions[Actions View]
+    end
+
+    subgraph Backend["Backend API (FastAPI)"]
+        API[FastAPI Server]
+        Routes[API Routes]
+        DB_Session[Database Session]
+    end
+
+    subgraph Orchestrator["Orchestrator (LangGraph)"]
+        LG[LangGraph StateGraph]
+        Triage[Triage Agent]
+        Safety[Safety Agent]
+        Email[Email Agent]
+        Event[Event Agent]
+        Planner_Agent[Planner Agent]
+        Preference[Preference Agent]
+    end
+
+    subgraph LLM["LLM Client (LangChain)"]
+        LC[LangChain Client]
+        OpenAI[OpenAI API]
+        NVIDIA[NVIDIA NIM]
+    end
+
+    subgraph Database["Database (PostgreSQL)"]
+        PG[(PostgreSQL)]
+        Tables[Tables: items, actions, logs, etc.]
+    end
+
+    subgraph Integrations["External Integrations"]
+        Gmail[Gmail OAuth]
+        Outlook[Outlook OAuth]
+        Calendar[Google Calendar]
+        Weather[Weather API]
+    end
+
+    Frontend -->|HTTP/REST| Backend
+    Backend -->|Calls| Orchestrator
+    Orchestrator -->|Uses| LLM
+    Backend -->|Reads/Writes| Database
+    Backend -->|Fetches Data| Integrations
+    Orchestrator -->|Stores Results| Database
+    LLM -->|API Calls| OpenAI
+    LLM -->|API Calls| NVIDIA
 ```
 
 ### Agent Workflow (LangGraph)
 
-The orchestrator uses **LangGraph** to manage agent execution:
+The orchestrator uses **LangGraph StateGraph** to manage multi-agent execution:
 
-```
-Intent: refresh_inbox
-  │
-  ├─► Triage Agent (classify & prioritize)
-  │     │
-  ├─► Safety Agent (detect scams)
-  │     │
-  ├─► Email Agent (summarize & draft)
-  │     │
-  └─► Event Agent (extract events)
-        │
-        └─► Action Proposals → Database
+```mermaid
+stateDiagram-v2
+    [*] --> Triage: refresh_inbox intent
+    
+    Triage --> Safety: Classify items
+    Safety --> Email: Check for scams
+    Email --> Event: Generate summaries
+    Event --> [*]: Extract events
+    
+    [*] --> Planner: plan_day intent
+    Planner --> [*]: Generate plan
+    
+    [*] --> Preference: learn_preferences intent
+    Preference --> [*]: Update preferences
+    
+    note right of Triage
+        Classifies emails/events
+        Assigns importance
+        Extracts deadlines
+    end note
+    
+    note right of Safety
+        Detects phishing/scams
+        Assesses action risks
+        Flags suspicious content
+    end note
+    
+    note right of Email
+        Summarizes emails
+        Generates draft replies
+        Respects tone preferences
+    end note
+    
+    note right of Event
+        Extracts calendar events
+        Proposes calendar entries
+        Detects deadlines
+    end note
 ```
 
 ### Data Flow
 
-1. **Ingestion**: OAuth clients fetch emails/events from providers
-2. **Normalization**: Data stored in unified `items` table
-3. **Orchestration**: LangGraph workflow routes to appropriate agents
-4. **Processing**: Agents generate metadata and action proposals
-5. **Storage**: Results stored in database with full audit trail
-6. **Presentation**: Frontend displays processed data and proposals
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Orchestrator
+    participant Agents
+    participant LLM
+    participant Database
+    participant Integrations
+
+    User->>Frontend: Interact with UI
+    Frontend->>Backend: API Request
+    Backend->>Orchestrator: Execute Intent
+    
+    Orchestrator->>Agents: Route to Agent
+    Agents->>LLM: Generate Response
+    LLM-->>Agents: LLM Output
+    Agents->>Orchestrator: Agent Result
+    Orchestrator->>Database: Store Proposals
+    
+    Backend->>Database: Query Data
+    Database-->>Backend: Return Results
+    Backend-->>Frontend: API Response
+    Frontend-->>User: Display Data
+    
+    Note over Integrations,Database: Background Sync
+    Integrations->>Backend: Fetch Emails/Events
+    Backend->>Database: Store Items
+    Database->>Orchestrator: Trigger Processing
+```
+
+### Technology Evolution
+
+```mermaid
+graph LR
+    subgraph Foundation["Foundation (2018-2020)"]
+        BERT[BERT]
+        GPT2[GPT-2]
+        T5[T5]
+    end
+    
+    subgraph Modern["Modern LLMs (2021-2022)"]
+        GPT3[GPT-3]
+        PaLM[PaLM]
+        LLaMA[LLaMA]
+    end
+    
+    subgraph Current["Current (2023-2024)"]
+        GPT4[GPT-4]
+        Claude[Claude]
+        Llama3[Llama 3]
+    end
+    
+    subgraph OurStack["Our Stack"]
+        LangChain[LangChain]
+        LangGraph[LangGraph]
+        OpenAI_Int[OpenAI Integration]
+        NVIDIA_Int[NVIDIA NIM]
+    end
+    
+    Foundation --> Modern
+    Modern --> Current
+    Current --> OurStack
+    
+    style OurStack fill:#4CAF50,stroke:#2E7D32,stroke-width:3px
+    style Current fill:#2196F3,stroke:#1565C0,stroke-width:2px
+```
 
 ---
 
@@ -257,29 +418,45 @@ Full interactive documentation available at:
 
 ### Project Structure
 
-```
-multiagents/
-├── backend/
-│   ├── api/
-│   │   ├── models/          # SQLAlchemy models
-│   │   ├── routes/          # API endpoints
-│   │   └── server.py        # FastAPI app
-│   ├── integrations/       # OAuth clients (Gmail, Outlook, Calendar)
-│   ├── ingestion/           # Data sync services
-│   └── executor/            # Action execution
-├── orchestrator/
-│   ├── agents/              # Agent implementations
-│   ├── state.py             # LangGraph state model
-│   └── orchestrator.py      # LangGraph workflow
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── pages/           # Route pages
-│   │   └── api/             # API clients
-│   └── package.json
-├── tests/                   # Test suite
-├── alembic/                 # Database migrations
-└── docs/                    # Documentation
+```mermaid
+graph TD
+    Root[multiagents/]
+    
+    Root --> Backend[backend/]
+    Root --> Orchestrator[orchestrator/]
+    Root --> Frontend[frontend/]
+    Root --> Tests[tests/]
+    Root --> Alembic[alembic/]
+    Root --> Docs[docs/]
+    
+    Backend --> API[api/]
+    Backend --> Integrations[integrations/]
+    Backend --> Ingestion[ingestion/]
+    Backend --> Executor[executor/]
+    
+    API --> Models[models/]
+    API --> Routes[routes/]
+    API --> Server[server.py]
+    
+    Orchestrator --> Agents[agents/]
+    Orchestrator --> State[state.py]
+    Orchestrator --> Orchestrator_Py[orchestrator.py]
+    
+    Agents --> Triage_File[triage_agent.py]
+    Agents --> Email_File[email_agent.py]
+    Agents --> Event_File[event_agent.py]
+    Agents --> Planner_File[planner_agent.py]
+    Agents --> Safety_File[safety_agent.py]
+    Agents --> Preference_File[preference_agent.py]
+    
+    Frontend --> Src[src/]
+    Src --> Components[components/]
+    Src --> Pages[pages/]
+    Src --> API_Client[api/]
+    
+    style Root fill:#2196F3,stroke:#1565C0,stroke-width:3px
+    style Orchestrator fill:#4CAF50,stroke:#2E7D32,stroke-width:2px
+    style Agents fill:#FF9800,stroke:#F57C00,stroke-width:2px
 ```
 
 ### Code Quality
@@ -332,19 +509,120 @@ pytest -v
 
 ## Database Schema
 
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    users ||--o{ connected_accounts : "has"
+    users ||--o{ items : "owns"
+    users ||--o{ action_proposals : "creates"
+    users ||--|| user_preferences : "has"
+    users ||--o{ preference_signals : "generates"
+    users ||--o{ agent_run_logs : "triggers"
+    users ||--o{ chat_sessions : "has"
+    
+    connected_accounts ||--o{ items : "sources"
+    
+    items ||--o| item_agent_metadata : "has"
+    items ||--o{ action_proposals : "triggers"
+    
+    action_proposals ||--o{ execution_logs : "executes"
+    
+    chat_sessions ||--o{ chat_messages : "contains"
+    
+    users {
+        uuid id PK
+        string email UK
+        string password_hash
+        string timezone
+        datetime created_at
+    }
+    
+    connected_accounts {
+        uuid id PK
+        uuid user_id FK
+        string provider
+        text access_token
+        text refresh_token
+        datetime token_expires_at
+    }
+    
+    items {
+        uuid id PK
+        uuid user_id FK
+        uuid source_account_id FK
+        string source_type
+        string title
+        text body_preview
+        text body_full
+        datetime created_at
+    }
+    
+    item_agent_metadata {
+        uuid id PK
+        uuid item_id FK
+        string category
+        string importance
+        jsonb metadata
+    }
+    
+    action_proposals {
+        uuid id PK
+        uuid user_id FK
+        string agent_name
+        string action_type
+        jsonb payload
+        string status
+        datetime created_at
+    }
+    
+    execution_logs {
+        uuid id PK
+        uuid action_proposal_id FK
+        string status
+        text error_message
+        datetime executed_at
+    }
+    
+    user_preferences {
+        uuid user_id PK
+        string quiet_hours_start
+        string quiet_hours_end
+        jsonb preferred_work_blocks
+        string email_tone
+    }
+    
+    chat_sessions {
+        uuid id PK
+        uuid user_id FK
+        datetime created_at
+    }
+    
+    chat_messages {
+        uuid id PK
+        uuid session_id FK
+        string sender
+        text content
+        jsonb metadata
+        datetime timestamp
+    }
+```
+
 ### Core Tables
 
-- **users** - User accounts and authentication
-- **connected_accounts** - OAuth provider connections
-- **items** - Normalized emails and calendar events
-- **item_agent_metadata** - Agent-generated insights and classifications
-- **action_proposals** - Proposed actions awaiting user approval
-- **execution_logs** - History of executed actions
-- **user_preferences** - User settings and preferences
-- **preference_signals** - Feedback signals for learning
-- **agent_run_logs** - Agent execution audit trail
-- **chat_sessions** - Chat conversation sessions
-- **chat_messages** - Individual chat messages
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| **users** | User accounts and authentication | `id`, `email`, `password_hash`, `timezone` |
+| **connected_accounts** | OAuth provider connections | `user_id`, `provider`, `access_token`, `refresh_token` |
+| **items** | Normalized emails and calendar events | `id`, `user_id`, `source_type`, `title`, `body_full` |
+| **item_agent_metadata** | Agent-generated insights | `item_id`, `category`, `importance`, `metadata` |
+| **action_proposals** | Proposed actions awaiting approval | `id`, `user_id`, `agent_name`, `action_type`, `status` |
+| **execution_logs** | History of executed actions | `id`, `action_proposal_id`, `status`, `executed_at` |
+| **user_preferences** | User settings and preferences | `user_id`, `quiet_hours_start`, `email_tone` |
+| **preference_signals** | Feedback signals for learning | `id`, `user_id`, `signal_type`, `metadata` |
+| **agent_run_logs** | Agent execution audit trail | `id`, `user_id`, `intent`, `execution_time_ms` |
+| **chat_sessions** | Chat conversation sessions | `id`, `user_id`, `created_at` |
+| **chat_messages** | Individual chat messages | `id`, `session_id`, `sender`, `content`, `timestamp` |
 
 See [docs/database_schema.md](docs/database_schema.md) for detailed schema documentation.
 
