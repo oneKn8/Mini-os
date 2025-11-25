@@ -3,7 +3,7 @@ Data ingestion and synchronization service.
 """
 
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 from sqlalchemy.orm import Session
 

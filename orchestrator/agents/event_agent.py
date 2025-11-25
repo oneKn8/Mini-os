@@ -4,7 +4,6 @@ Event Agent - Extracts and proposes calendar events.
 
 import json
 import time
-from datetime import datetime, timedelta
 from typing import Dict, List
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent

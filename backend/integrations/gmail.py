@@ -3,7 +3,6 @@ Gmail OAuth integration and API client.
 Based on patterns from GenerativeAIExamples/community/smart-health-agent/google_fit_utils.py
 """
 
-import os
 from datetime import datetime
 from typing import Dict, List, Optional
 

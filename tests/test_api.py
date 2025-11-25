@@ -2,7 +2,6 @@
 API integration tests
 """
 
-import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.server import app

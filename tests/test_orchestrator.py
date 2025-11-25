@@ -4,7 +4,6 @@ Tests for the orchestrator
 
 import pytest
 
-from orchestrator.agents.base import AgentContext
 from orchestrator.orchestrator import Orchestrator
 
 

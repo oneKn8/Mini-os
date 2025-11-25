@@ -4,7 +4,7 @@ Email Agent - Generates summaries and draft replies.
 
 import json
 import time
-from typing import Dict, List
+from typing import Dict
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient

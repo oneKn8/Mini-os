@@ -55,7 +55,8 @@ Today's Events ({len(events)}):
 Weather: {context.weather_context.get('condition', 'Clear')} {context.weather_context.get('temperature', 20)}°C
 
 User Preferences:
-- Quiet hours: {context.user_preferences.get('quiet_hours_start', 'none')} - {context.user_preferences.get('quiet_hours_end', 'none')}
+- Quiet hours: {context.user_preferences.get('quiet_hours_start', 'none')} - \
+{context.user_preferences.get('quiet_hours_end', 'none')}
 - Work blocks: {context.user_preferences.get('preferred_work_blocks', [])}
 
 Respond with JSON:
@@ -102,7 +103,7 @@ Keep it realistic - max 3-5 must-do items."""
                     "risk_level": "low",
                 }
                 proposals.append(proposal)
-            except:
+            except Exception:
                 continue
 
         return proposals
