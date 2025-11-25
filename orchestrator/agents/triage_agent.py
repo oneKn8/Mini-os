@@ -4,8 +4,7 @@ Triage Agent - Classifies and prioritizes items.
 
 import json
 import time
-from datetime import datetime
-from typing import Dict, List
+from typing import Dict
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
@@ -32,7 +31,7 @@ class TriageAgent(BaseAgent):
                 try:
                     metadata = await self._triage_item(item)
                     metadata_updates.append({"item_id": item.get("id"), "metadata": metadata})
-                except Exception as e:
+                except Exception:
                     # Continue processing other items
                     continue
 
@@ -56,9 +55,13 @@ class TriageAgent(BaseAgent):
         """Triage a single item using LLM."""
         prompt = self._build_triage_prompt(item)
 
-        # Call LLM and parse JSON
-        response = self.llm.call(prompt, temperature=0.2, max_tokens=1024)
-        metadata = json.loads(response)
+        # Call LLM and parse JSON using LangChain
+        try:
+            metadata = self.llm.call_json(prompt, temperature=0.2, max_tokens=1024)
+        except json.JSONDecodeError:
+            # Fallback if JSON parsing fails
+            response = self.llm.call(prompt, temperature=0.2, max_tokens=1024)
+            metadata = json.loads(response)
 
         return {
             "category": metadata.get("category", "other"),
