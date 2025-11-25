@@ -6,9 +6,9 @@ import os
 import sys
 
 # Add project to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # noqa: E402
 
-from orchestrator.llm_client import LLMClient
+from orchestrator.llm_client import LLMClient  # noqa: E402
 
 
 def test_openai():
@@ -84,7 +84,7 @@ Respond with JSON:
 }
 """
         result = client.call_json(email_prompt, temperature=0.2, max_tokens=200)
-        print(f"[OK] Classification result:")
+        print("[OK] Classification result:")
         for key, value in result.items():
             print(f"     {key}: {value}")
         print()
