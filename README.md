@@ -34,7 +34,7 @@ A multi-agent AI system for managing emails, calendar events, and daily planning
 1. Clone the repository:
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/Sant0-9/Mini-os
 cd multiagents
 ```
 
