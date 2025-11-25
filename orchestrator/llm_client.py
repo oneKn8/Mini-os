@@ -1,20 +1,20 @@
 """
-LLM Client - Unified interface for NVIDIA NIM and OpenAI
+LLM Client using LangChain for unified interface to NVIDIA NIM and OpenAI.
 """
 
-import json
 import os
 from typing import Optional
 
-import requests
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from langchain_openai import ChatOpenAI
 
 
 class LLMClient:
-    """Unified LLM client supporting multiple providers."""
+    """Unified LLM client using LangChain, supporting multiple providers."""
 
     def __init__(self, provider: Optional[str] = None):
         """
-        Initialize LLM client.
+        Initialize LLM client with LangChain.
 
         Args:
             provider: 'nvidia' or 'openai'. Defaults to env var AI_PROVIDER or 'openai'
@@ -22,22 +22,29 @@ class LLMClient:
         self.provider = provider or os.getenv("AI_PROVIDER", "openai")
 
         if self.provider == "nvidia":
-            self.api_key = os.getenv("NVIDIA_API_KEY")
-            self.model = "meta/llama3-70b-instruct"
-            self.api_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+            api_key = os.getenv("NVIDIA_API_KEY")
+            if not api_key:
+                raise ValueError("NVIDIA_API_KEY not found")
+            self.llm = ChatNVIDIA(
+                model="meta/llama3-70b-instruct",
+                nvidia_api_key=api_key,
+            )
         elif self.provider == "openai":
-            self.api_key = os.getenv("OPENAI_API_KEY")
-            self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-            self.api_url = "https://api.openai.com/v1/chat/completions"
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY not found")
+            model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+            self.llm = ChatOpenAI(
+                model=model,
+                openai_api_key=api_key,
+                temperature=0.3,
+            )
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
-        if not self.api_key:
-            raise ValueError(f"API key not found for provider: {self.provider}")
-
     def call(self, prompt: str, temperature: float = 0.3, max_tokens: int = 1024) -> str:
         """
-        Call the LLM with a prompt.
+        Call the LLM with a prompt using LangChain.
 
         Args:
             prompt: The prompt to send
@@ -47,24 +54,16 @@ class LLMClient:
         Returns:
             The LLM response as a string
         """
-        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        # Update temperature if different from default
+        if temperature != 0.3 and hasattr(self.llm, "temperature"):
+            self.llm.temperature = temperature
 
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
-        response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
-
-        result = response.json()
-        return result["choices"][0]["message"]["content"]
+        response = self.llm.invoke(prompt)
+        return response.content
 
     def call_json(self, prompt: str, temperature: float = 0.2, max_tokens: int = 1024) -> dict:
         """
-        Call the LLM and parse JSON response.
+        Call the LLM and parse JSON response using LangChain.
 
         Args:
             prompt: The prompt to send (should request JSON output)
@@ -74,7 +73,11 @@ class LLMClient:
         Returns:
             Parsed JSON response as dict
         """
-        response_text = self.call(prompt, temperature, max_tokens)
+        import json
+
+        # Add JSON formatting instruction to prompt
+        json_prompt = f"{prompt}\n\nRespond with valid JSON only, no markdown code blocks."
+        response_text = self.call(json_prompt, temperature, max_tokens)
 
         # Try to extract JSON if wrapped in markdown code blocks
         if "```json" in response_text:
@@ -89,4 +92,4 @@ class LLMClient:
         return json.loads(response_text)
 
     def __repr__(self):
-        return f"LLMClient(provider={self.provider}, model={self.model})"
+        return f"LLMClient(provider={self.provider}, llm={type(self.llm).__name__})"
