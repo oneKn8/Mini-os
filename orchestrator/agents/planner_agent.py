@@ -9,22 +9,24 @@ from typing import Dict, List
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
+from orchestrator.state import OpsAgentState
 
 
 class PlannerAgent(BaseAgent):
-    """Agent for daily and weekly planning."""
+    """Agent for daily and weekly planning. Works with LangGraph state."""
 
     def __init__(self, name: str = "planner"):
         super().__init__(name)
         self.llm = LLMClient()
 
-    async def run(self, context: AgentContext) -> AgentResult:
-        """Generate plan for today or upcoming days."""
+    async def run(self, context: AgentContext | OpsAgentState) -> AgentResult:
+        """Generate plan for today or upcoming days. Works with both AgentContext and OpsAgentState."""
         start_time = time.time()
 
         try:
-            plan_summary = await self._generate_plan(context)
-            action_proposals = await self._propose_time_blocks(context, plan_summary)
+            ctx = self._get_context(context)
+            plan_summary = await self._generate_plan(ctx)
+            action_proposals = await self._propose_time_blocks(ctx, plan_summary)
 
             duration_ms = int((time.time() - start_time) * 1000)
 

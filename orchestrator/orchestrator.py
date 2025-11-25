@@ -97,9 +97,9 @@ class Orchestrator:
             state.errors.append({"agent": "triage", "error": "Agent not found"})
             return state
 
-        context = self._state_to_context(state)
-        result = await agent.run(context)
-        return self._update_state_from_result(state, "triage", result)
+        # Pass state directly - agent will handle conversion if needed
+        result = await agent.run(state)
+        return agent._update_state_from_result(state, result)
 
     async def _safety_node(self, state: OpsAgentState) -> OpsAgentState:
         """Safety agent node."""
@@ -108,9 +108,8 @@ class Orchestrator:
             state.errors.append({"agent": "safety", "error": "Agent not found"})
             return state
 
-        context = self._state_to_context(state)
-        result = await agent.run(context)
-        return self._update_state_from_result(state, "safety", result)
+        result = await agent.run(state)
+        return agent._update_state_from_result(state, result)
 
     async def _email_node(self, state: OpsAgentState) -> OpsAgentState:
         """Email agent node."""
@@ -119,9 +118,8 @@ class Orchestrator:
             state.errors.append({"agent": "email", "error": "Agent not found"})
             return state
 
-        context = self._state_to_context(state)
-        result = await agent.run(context)
-        return self._update_state_from_result(state, "email", result)
+        result = await agent.run(state)
+        return agent._update_state_from_result(state, result)
 
     async def _event_node(self, state: OpsAgentState) -> OpsAgentState:
         """Event agent node."""
@@ -130,9 +128,8 @@ class Orchestrator:
             state.errors.append({"agent": "event", "error": "Agent not found"})
             return state
 
-        context = self._state_to_context(state)
-        result = await agent.run(context)
-        return self._update_state_from_result(state, "event", result)
+        result = await agent.run(state)
+        return agent._update_state_from_result(state, result)
 
     async def _planner_node(self, state: OpsAgentState) -> OpsAgentState:
         """Planner agent node."""
@@ -141,9 +138,8 @@ class Orchestrator:
             state.errors.append({"agent": "planner", "error": "Agent not found"})
             return state
 
-        context = self._state_to_context(state)
-        result = await agent.run(context)
-        return self._update_state_from_result(state, "planner", result)
+        result = await agent.run(state)
+        return agent._update_state_from_result(state, result)
 
     async def _preference_node(self, state: OpsAgentState) -> OpsAgentState:
         """Preference agent node."""
@@ -152,48 +148,8 @@ class Orchestrator:
             state.errors.append({"agent": "preference", "error": "Agent not found"})
             return state
 
-        context = self._state_to_context(state)
-        result = await agent.run(context)
-        return self._update_state_from_result(state, "preference", result)
-
-    def _state_to_context(self, state: OpsAgentState) -> AgentContext:
-        """Convert LangGraph state to AgentContext."""
-        return AgentContext(
-            user_id=state.user_id,
-            intent=state.intent,
-            items=state.items,
-            action_proposals=state.action_proposals,
-            user_preferences=state.user_preferences,
-            weather_context=state.weather_context,
-            metadata=state.metadata,
-        )
-
-    def _update_state_from_result(self, state: OpsAgentState, agent_name: str, result: AgentResult) -> OpsAgentState:
-        """Update state with agent result."""
-        # Add agent log
-        state.agent_logs.append(
-            {
-                "agent": agent_name,
-                "status": result.status,
-                "duration_ms": result.duration_ms,
-                "error": result.error_message,
-            }
-        )
-
-        # Add action proposals
-        if result.action_proposals:
-            state.action_proposals.extend(result.action_proposals)
-
-        # Update metadata
-        if result.metadata_updates:
-            for update in result.metadata_updates:
-                state.metadata.update(update)
-
-        # Add errors
-        if result.status == "error":
-            state.errors.append({"agent": agent_name, "error": result.error_message})
-
-        return state
+        result = await agent.run(state)
+        return agent._update_state_from_result(state, result)
 
     async def run(self, intent: str, context: AgentContext) -> OrchestrationResult:
         """Execute LangGraph workflow for the given intent."""

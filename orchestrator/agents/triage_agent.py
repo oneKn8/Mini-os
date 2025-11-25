@@ -8,21 +8,24 @@ from typing import Dict
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
+from orchestrator.state import OpsAgentState
 
 
 class TriageAgent(BaseAgent):
-    """Agent that triages and categorizes items."""
+    """Agent that triages and categorizes items. Works with LangGraph state."""
 
     def __init__(self, name: str = "triage"):
         super().__init__(name)
         self.llm = LLMClient()
 
-    async def run(self, context: AgentContext) -> AgentResult:
-        """Triage items and generate metadata."""
+    async def run(self, context: AgentContext | OpsAgentState) -> AgentResult:
+        """Triage items and generate metadata. Works with both AgentContext and OpsAgentState."""
         start_time = time.time()
 
         try:
-            items = context.items
+            # Convert to AgentContext for compatibility
+            ctx = self._get_context(context)
+            items = ctx.items
             if not items:
                 return self._create_result(status="success", output_summary={"items_processed": 0}, duration_ms=0)
 

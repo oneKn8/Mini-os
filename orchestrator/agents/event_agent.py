@@ -8,21 +8,23 @@ from typing import Dict, List
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
+from orchestrator.state import OpsAgentState
 
 
 class EventAgent(BaseAgent):
-    """Agent for calendar event extraction and proposals."""
+    """Agent for calendar event extraction and proposals. Works with LangGraph state."""
 
     def __init__(self, name: str = "event"):
         super().__init__(name)
         self.llm = LLMClient()
 
-    async def run(self, context: AgentContext) -> AgentResult:
-        """Extract events from items and propose calendar actions."""
+    async def run(self, context: AgentContext | OpsAgentState) -> AgentResult:
+        """Extract events from items and propose calendar actions. Works with both AgentContext and OpsAgentState."""
         start_time = time.time()
 
         try:
-            items = [i for i in context.items if i.get("source_type") in ["email", "event"]]
+            ctx = self._get_context(context)
+            items = [i for i in ctx.items if i.get("source_type") in ["email", "event"]]
             action_proposals = []
 
             for item in items:

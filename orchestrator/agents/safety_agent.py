@@ -8,29 +8,31 @@ from typing import Dict
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
+from orchestrator.state import OpsAgentState
 
 
 class SafetyAgent(BaseAgent):
-    """Agent for safety checking and scam detection."""
+    """Agent for safety checking and scam detection. Works with LangGraph state."""
 
     def __init__(self, name: str = "safety"):
         super().__init__(name)
         self.llm = LLMClient()
 
-    async def run(self, context: AgentContext) -> AgentResult:
-        """Check items for scams and assess action risks."""
+    async def run(self, context: AgentContext | OpsAgentState) -> AgentResult:
+        """Check items for scams and assess action risks. Works with both AgentContext and OpsAgentState."""
         start_time = time.time()
 
         try:
+            ctx = self._get_context(context)
             metadata_updates = []
             proposal_updates = []
 
-            for item in context.items:
+            for item in ctx.items:
                 if item.get("source_type") == "email":
                     safety_check = await self._check_email_safety(item)
                     metadata_updates.append({"item_id": item.get("id"), "metadata": safety_check})
 
-            for proposal in context.action_proposals:
+            for proposal in ctx.action_proposals:
                 risk = await self._assess_action_risk(proposal)
                 proposal_updates.append({"proposal_id": proposal.get("id"), "risk": risk})
 

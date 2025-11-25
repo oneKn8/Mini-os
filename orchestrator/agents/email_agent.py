@@ -8,21 +8,23 @@ from typing import Dict
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
+from orchestrator.state import OpsAgentState
 
 
 class EmailAgent(BaseAgent):
-    """Agent for email summarization and draft generation."""
+    """Agent for email summarization and draft generation. Works with LangGraph state."""
 
     def __init__(self, name: str = "email"):
         super().__init__(name)
         self.llm = LLMClient()
 
-    async def run(self, context: AgentContext) -> AgentResult:
-        """Generate email summaries and drafts."""
+    async def run(self, context: AgentContext | OpsAgentState) -> AgentResult:
+        """Generate email summaries and drafts. Works with both AgentContext and OpsAgentState."""
         start_time = time.time()
 
         try:
-            items = [i for i in context.items if i.get("source_type") == "email"]
+            ctx = self._get_context(context)
+            items = [i for i in ctx.items if i.get("source_type") == "email"]
             metadata_updates = []
             action_proposals = []
 
@@ -30,8 +32,8 @@ class EmailAgent(BaseAgent):
                 summary = await self._summarize_email(item)
                 metadata_updates.append({"item_id": item.get("id"), "metadata": {"summary": summary}})
 
-                if context.metadata.get("draft_reply") and item.get("id") == context.metadata.get("item_id"):
-                    draft = await self._generate_draft(item, context.user_preferences)
+                if ctx.metadata.get("draft_reply") and item.get("id") == ctx.metadata.get("item_id"):
+                    draft = await self._generate_draft(item, ctx.user_preferences)
                     action_proposals.append(draft)
 
             duration_ms = int((time.time() - start_time) * 1000)

@@ -8,21 +8,23 @@ from typing import Dict, List
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
 from orchestrator.llm_client import LLMClient
+from orchestrator.state import OpsAgentState
 
 
 class PreferenceAgent(BaseAgent):
-    """Agent for learning user preferences from feedback signals."""
+    """Agent for learning user preferences from feedback signals. Works with LangGraph state."""
 
     def __init__(self, name: str = "preference"):
         super().__init__(name)
         self.llm = LLMClient()
 
-    async def run(self, context: AgentContext) -> AgentResult:
-        """Analyze feedback signals and update preferences."""
+    async def run(self, context: AgentContext | OpsAgentState) -> AgentResult:
+        """Analyze feedback signals and update preferences. Works with both AgentContext and OpsAgentState."""
         start_time = time.time()
 
         try:
-            signals = context.metadata.get("preference_signals", [])
+            ctx = self._get_context(context)
+            signals = ctx.metadata.get("preference_signals", [])
 
             if not signals:
                 return self._create_result(
@@ -31,7 +33,7 @@ class PreferenceAgent(BaseAgent):
                     duration_ms=int((time.time() - start_time) * 1000),
                 )
 
-            preference_updates = await self._analyze_signals(signals, context.user_preferences)
+            preference_updates = await self._analyze_signals(signals, ctx.user_preferences)
 
             duration_ms = int((time.time() - start_time) * 1000)
 
