@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-    Inbox as InboxIcon, 
-    Check, 
-    Trash2, 
-    MoreHorizontal, 
-    Mail, 
-    Briefcase, 
-    User, 
-    DollarSign,
-    Filter,
-    RefreshCw,
-    Search
+  Inbox as InboxIcon, 
+  Search, 
+  RefreshCw, 
+  Mail, 
+  DollarSign, 
+  User, 
+  Briefcase,
+  Trash2,
+  Archive,
+  Reply
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import GlassCard from '../components/UI/GlassCard'
 
 interface InboxItem {
   id: string
@@ -30,8 +30,10 @@ interface InboxItem {
 export default function InboxView() {
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [filter, setFilter] = useState('all')
-  const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null)
+  const [syncMessage, setSyncMessage] = useState<string | null>(null)
 
   useEffect(() => {
     fetchInbox()
@@ -43,7 +45,20 @@ export default function InboxView() {
       const response = await fetch('/api/inbox')
       if (response.ok) {
         const data = await response.json()
-        setItems(data.items || [])
+        const inboxItems = Array.isArray(data) ? data : (data.items || [])
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mappedItems = inboxItems.map((item: any) => ({
+          id: item.id,
+          subject: item.title || '',
+          sender: item.sender || '',
+          preview: item.body_preview || '',
+          timestamp: item.received_at || '',
+          category: item.category || 'other',
+          importance: item.importance || 'medium',
+          read: false,
+          labels: item.labels || []
+        }))
+        setItems(mappedItems)
       }
     } catch (error) {
       console.error('Failed to fetch inbox:', error)
@@ -52,231 +67,233 @@ export default function InboxView() {
     }
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "work": return <Briefcase size={16} className="text-accent-secondary" />
-      case "personal": return <User size={16} className="text-accent-success" />
-      case "finance": return <DollarSign size={16} className="text-accent-warning" />
-      default: return <Mail size={16} className="text-text-tertiary" />
-    }
-  }
-  
-  const getImportanceColor = (importance: string) => {
-    switch (importance) {
-      case 'high': return 'bg-accent-error'
-      case 'medium': return 'bg-accent-warning'
-      case 'low': return 'bg-accent-success'
-      default: return 'bg-text-tertiary'
-    }
-  }
-
-  const filteredItems = items.filter((item) => {
-    if (filter === 'all') return true
-    if (filter === 'unread') return !item.read
-    return item.category === filter
-  })
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05
+  const refreshInbox = async () => {
+    setSyncing(true)
+    setSyncMessage(null)
+    try {
+      // First, trigger sync from external providers
+      const syncResponse = await fetch('/api/sync/refresh-inbox', { method: 'POST' })
+      const syncData = await syncResponse.json()
+      
+      if (syncData.status === 'no_accounts') {
+        setSyncMessage(syncData.message)
+      } else if (syncData.synced_items > 0) {
+        setSyncMessage(`Synced ${syncData.synced_items} new items`)
+      } else {
+        setSyncMessage('Already up to date')
       }
+      
+      // Then fetch the updated inbox
+      await fetchInbox()
+      
+      // Clear message after 3 seconds
+      setTimeout(() => setSyncMessage(null), 3000)
+    } catch (error) {
+      console.error('Failed to refresh inbox:', error)
+      setSyncMessage('Sync failed. Please try again.')
+      setTimeout(() => setSyncMessage(null), 3000)
+    } finally {
+      setSyncing(false)
     }
   }
-  
-  const item = {
-    hidden: { opacity: 0, x: -10 },
-    show: { opacity: 1, x: 0 }
+
+  // Category Icons
+  const CategoryIcon = ({ category }: { category: string }) => {
+    switch (category) {
+      case "work": return <Briefcase size={14} className="text-accent-secondary" />
+      case "personal": return <User size={14} className="text-accent-success" />
+      case "finance": return <DollarSign size={14} className="text-accent-warning" />
+      default: return <Mail size={14} className="text-text-tertiary" />
+    }
   }
+
+  // Importance Indicator
+  const ImportanceDot = ({ level }: { level: string }) => {
+    const color = {
+      high: 'bg-accent-error',
+      medium: 'bg-accent-warning',
+      low: 'bg-accent-success'
+    }[level] || 'bg-text-tertiary'
+    return <div className={`w-2 h-2 rounded-full ${color} shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
+  }
+
+  const filteredItems = items.filter(item => filter === 'all' || item.category === filter)
+  const selectedItem = items.find(i => i.id === selectedId)
 
   return (
-    <div className="h-full flex flex-col md:flex-row gap-6 pb-20">
-       {/* List Column */}
-       <div className={clsx(
-           "flex-1 flex flex-col min-w-0 h-full",
-           selectedItem ? "hidden md:flex" : "flex"
-       )}>
-            <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl font-bold text-text-primary">Inbox</h1>
-                <button 
-                    onClick={fetchInbox}
-                    className="p-2 rounded-lg hover:bg-surface text-text-secondary hover:text-accent-primary transition-colors"
-                >
-                    <RefreshCw size={20} className={clsx(loading && "animate-spin")} />
-                </button>
-            </div>
-
-            {/* Search & Filters */}
-            <div className="space-y-4 mb-6">
-                <div className="relative">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
-                    <input 
-                        type="text" 
-                        placeholder="Search messages..."
-                        className="w-full rounded-xl border border-border-light bg-surface pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-all"
-                    />
-                </div>
-
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    {['all', 'unread', "work", "personal", "finance"].map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setFilter(f)}
-                            className={clsx(
-                                "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
-                                filter === f 
-                                    ? "bg-accent-primary text-white shadow-md" 
-                                    : "bg-surface text-text-secondary hover:bg-bg-secondary border border-border-light"
-                            )}
-                        >
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Message List */}
-            <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-2">
-                {loading && filteredItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <div className="spinner-large text-accent-primary"></div>
-                    </div>
-                ) : (
-                    <motion.div 
-                        variants={container}
-                        initial="hidden"
-                        animate="show"
-                        className="space-y-2"
-                    >
-                        {filteredItems.map((message) => (
-                            <motion.div
-                                key={message.id}
-                                variants={item}
-                                layoutId={`message-${message.id}`}
-                                onClick={() => setSelectedItem(message)}
-                                className={clsx(
-                                    "group cursor-pointer rounded-xl p-4 border transition-all",
-                                    selectedItem?.id === message.id 
-                                        ? "bg-accent-primary/5 border-accent-primary" 
-                                        : "bg-surface border-border-light hover:border-accent-primary/30 hover:shadow-sm",
-                                    !message.read && "border-l-4 border-l-accent-primary"
-                                )}
-                            >
-                                <div className="flex justify-between items-start mb-1">
-                                    <div className="flex items-center gap-2">
-                                        <div className={clsx("w-2 h-2 rounded-full", getImportanceColor(message.importance))}></div>
-                                        <span className={clsx(
-                                            "text-sm font-semibold",
-                                            !message.read ? "text-text-primary" : "text-text-secondary"
-                                        )}>{message.sender}</span>
-                                    </div>
-                                    <span className="text-xs text-text-tertiary">{message.timestamp}</span>
-                                </div>
-                                
-                                <h3 className={clsx(
-                                    "text-sm mb-1",
-                                    !message.read ? "font-bold text-text-primary" : "font-medium text-text-secondary"
-                                )}>{message.subject}</h3>
-                                
-                                <p className="text-xs text-text-tertiary line-clamp-2">{message.preview}</p>
-                                
-                                <div className="flex items-center gap-2 mt-3">
-                                    <div className="flex items-center gap-1 text-xs text-text-tertiary px-2 py-1 rounded-md bg-bg-secondary">
-                                        {getCategoryIcon(message.category)}
-                                        <span className="capitalize">{message.category}</span>
-                                    </div>
-                                    {message.labels.map(label => (
-                                        <span key={label} className="text-[10px] px-2 py-1 rounded-md bg-bg-secondary text-text-tertiary border border-border-light">
-                                            {label}
-                                        </span>
-                                    ))}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </motion.div>
-                )}
-                
-                {!loading && filteredItems.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <div className="w-16 h-16 rounded-full bg-bg-secondary flex items-center justify-center mb-4">
-                            <InboxIcon size={32} className="text-text-muted" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-text-primary">Inbox Zero</h3>
-                        <p className="text-text-secondary">You're all caught up!</p>
-                    </div>
-                )}
-            </div>
-       </div>
-
-       {/* Detail View */}
-       <AnimatePresence mode="wait">
-           {selectedItem ? (
-               <motion.div 
-                   initial={{ opacity: 0, x: 20 }}
-                   animate={{ opacity: 1, x: 0 }}
-                   exit={{ opacity: 0, x: 20 }}
-                   className="flex-1 bg-surface rounded-2xl border border-border-light shadow-sm flex flex-col h-full overflow-hidden"
-               >
-                   {/* Toolbar */}
-                   <div className="flex items-center justify-between px-6 py-4 border-b border-border-light">
-                       <div className="flex items-center gap-2">
-                           <button className="p-2 hover:bg-bg-secondary rounded-lg text-text-secondary" title="Archive">
-                               <Check size={18} />
-                           </button>
-                           <button className="p-2 hover:bg-bg-secondary rounded-lg text-text-secondary" title="Delete">
-                               <Trash2 size={18} />
-                           </button>
-                           <button className="p-2 hover:bg-bg-secondary rounded-lg text-text-secondary">
-                               <MoreHorizontal size={18} />
-                           </button>
-                       </div>
-                       <button 
-                           onClick={() => setSelectedItem(null)}
-                           className="md:hidden text-sm font-medium text-accent-primary"
-                       >
-                           Back to list
-                       </button>
-                   </div>
-
-                   {/* Content */}
-                   <div className="flex-1 overflow-y-auto p-8">
-                       <h2 className="text-2xl font-bold text-text-primary mb-4">{selectedItem.subject}</h2>
-                       
-                       <div className="flex items-start justify-between mb-8 pb-8 border-b border-border-light">
-                           <div className="flex items-center gap-4">
-                               <div className="w-10 h-10 rounded-full bg-accent-primary/10 flex items-center justify-center text-accent-primary font-bold text-lg">
-                                   {selectedItem.sender[0]}
-                               </div>
-                               <div>
-                                   <div className="font-semibold text-text-primary">{selectedItem.sender}</div>
-                                   <div className="text-xs text-text-tertiary">To: Me</div>
-                               </div>
-                           </div>
-                           <div className="text-sm text-text-tertiary">{selectedItem.timestamp}</div>
-                       </div>
-
-                       <div className="prose prose-sm max-w-none text-text-secondary leading-relaxed">
-                           <p>{selectedItem.preview}</p>
-                           <p className="mt-4">
-                               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                           </p>
-                           <p className="mt-4">
-                               Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-                           </p>
-                       </div>
-                   </div>
-               </motion.div>
-           ) : (
-               <div className="hidden md:flex flex-1 items-center justify-center bg-bg-secondary/50 rounded-2xl border border-dashed border-border-dark/20">
-                   <div className="text-center text-text-muted">
-                       <Mail size={48} className="mx-auto mb-4 opacity-20" />
-                       <p>Select a message to read</p>
-                   </div>
-               </div>
+    <div className="h-full flex flex-col gap-6 pb-20">
+      
+      {/* Header & Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+           <h1 className="text-3xl font-bold text-text-primary text-glow">Inbox</h1>
+           <span className="bg-surface px-2 py-0.5 rounded-full text-xs text-text-secondary border border-border-light">
+             {items.length}
+           </span>
+           {syncMessage && (
+             <span className="text-xs text-accent-primary animate-pulse">
+               {syncMessage}
+             </span>
            )}
-       </AnimatePresence>
+        </div>
+        <div className="flex gap-2">
+           <button 
+             onClick={refreshInbox} 
+             disabled={syncing}
+             className="p-2 rounded-lg bg-surface hover:bg-surface-hover border border-border-light transition-colors disabled:opacity-50"
+             title="Sync from Gmail/Outlook"
+           >
+             <RefreshCw size={18} className={clsx((syncing || loading) && "animate-spin")} />
+           </button>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <GlassCard className="p-2 flex gap-2 items-center" noBorder>
+         <div className="relative flex-1">
+           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+           <input 
+             type="text" 
+             placeholder="Search messages..." 
+             className="w-full bg-black/20 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent-primary/50 transition-colors placeholder-text-muted"
+           />
+         </div>
+         <div className="h-8 w-[1px] bg-white/10 mx-1" />
+         {['all', 'work', 'personal', 'finance'].map(f => (
+           <button 
+             key={f}
+             onClick={() => setFilter(f)}
+             className={clsx(
+               "px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all",
+               filter === f ? "bg-accent-primary text-white shadow-lg shadow-accent-primary/20" : "text-text-secondary hover:bg-white/5"
+             )}
+           >
+             {f}
+           </button>
+         ))}
+      </GlassCard>
+
+      {/* Main Content Area: Split View */}
+      <div className="flex-1 flex gap-6 min-h-0">
+        
+        {/* Message List (Stack) */}
+        <div className={clsx(
+          "flex-1 flex flex-col gap-3 overflow-y-auto pr-2 no-scrollbar transition-all duration-300",
+          selectedId ? "hidden lg:flex lg:w-1/3 lg:flex-none" : "w-full"
+        )}>
+          {loading && items.length === 0 ? (
+            <div className="text-center py-20 text-text-tertiary animate-pulse">Loading inbox...</div>
+          ) : (
+            filteredItems.map((item) => (
+              <motion.div
+                key={item.id}
+                layoutId={`card-${item.id}`}
+                onClick={() => setSelectedId(item.id)}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileHover={{ scale: 1.02, x: 4 }}
+                className={clsx(
+                  "group cursor-pointer relative p-4 rounded-xl border transition-all duration-300",
+                  selectedId === item.id 
+                    ? "bg-accent-primary/10 border-accent-primary shadow-[0_0_15px_rgba(76,110,245,0.15)]" 
+                    : "bg-surface/40 border-border-light hover:bg-surface/60 hover:border-border-medium"
+                )}
+              >
+                 <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                       <ImportanceDot level={item.importance} />
+                       <span className={clsx("text-sm font-semibold", !item.read ? "text-text-primary" : "text-text-secondary")}>
+                         {item.sender}
+                       </span>
+                    </div>
+                    <span className="text-[10px] text-text-tertiary">
+                      {new Date(item.timestamp).toLocaleDateString()}
+                    </span>
+                 </div>
+                 <h3 className={clsx("text-sm mb-1 line-clamp-1", !item.read ? "font-bold text-text-primary" : "font-medium text-text-secondary")}>
+                   {item.subject}
+                 </h3>
+                 <p className="text-xs text-text-tertiary line-clamp-2 mb-3">{item.preview}</p>
+                 
+                 <div className="flex gap-2">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/20 border border-white/5 text-[10px] text-text-secondary capitalize">
+                      <CategoryIcon category={item.category} />
+                      {item.category}
+                    </span>
+                 </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+
+        {/* Reading Pane (Glass Overlay) */}
+        <AnimatePresence mode="wait">
+           {selectedItem ? (
+             <motion.div 
+               key={selectedItem.id}
+               initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+               animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+               exit={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
+               className="flex-[2] h-full"
+             >
+               <GlassCard className="h-full flex flex-col" variant="dark">
+                 {/* Toolbar */}
+                 <div className="p-4 border-b border-white/5 flex justify-between items-center">
+                    <button onClick={() => setSelectedId(null)} className="lg:hidden text-sm text-text-secondary hover:text-white">
+                      ← Back
+                    </button>
+                    <div className="flex gap-2 ml-auto">
+                       <button className="p-2 hover:bg-white/10 rounded-lg text-text-secondary transition-colors" title="Reply">
+                         <Reply size={18} />
+                       </button>
+                       <button className="p-2 hover:bg-white/10 rounded-lg text-text-secondary transition-colors" title="Archive">
+                         <Archive size={18} />
+                       </button>
+                       <button className="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-lg text-text-secondary transition-colors" title="Delete">
+                         <Trash2 size={18} />
+                       </button>
+                    </div>
+                 </div>
+
+                 {/* Content */}
+                 <div className="p-8 overflow-y-auto flex-1">
+                    <h2 className="text-2xl font-bold text-white mb-6">{selectedItem.subject}</h2>
+                    
+                    <div className="flex items-center gap-4 mb-8 pb-8 border-b border-white/5">
+                       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent-primary to-accent-secondary flex items-center justify-center text-white text-lg font-bold shadow-lg">
+                         {selectedItem.sender[0]}
+                       </div>
+                       <div>
+                         <div className="font-semibold text-white text-lg">{selectedItem.sender}</div>
+                         <div className="text-xs text-text-tertiary">To: Me • {new Date(selectedItem.timestamp).toLocaleString()}</div>
+                       </div>
+                    </div>
+
+                    <div className="prose prose-invert max-w-none text-text-secondary">
+                      <p>{selectedItem.preview}</p>
+                      <p className="mt-4">
+                         This is a placeholder for the full email body. In a real implementation, 
+                         this would render the HTML content of the email securely.
+                      </p>
+                      <p>
+                         Beast mode UI requires high contrast reading environments, so we ensure 
+                         typography is legible against the dark glass background.
+                      </p>
+                    </div>
+                 </div>
+               </GlassCard>
+             </motion.div>
+           ) : (
+             <div className="hidden lg:flex flex-[2] h-full items-center justify-center opacity-20">
+                <div className="text-center">
+                   <InboxIcon size={64} className="mx-auto mb-4" />
+                   <p className="text-xl font-light">Select a message</p>
+                </div>
+             </div>
+           )}
+        </AnimatePresence>
+
+      </div>
     </div>
   )
 }

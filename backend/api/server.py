@@ -6,13 +6,37 @@ Based on patterns from GenerativeAIExamples/RAG/src/chain_server/server.py
 import logging
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Dict
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from backend.api.routes import actions, chat, inbox, planner, rag, sync
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    load_dotenv(env_path)
+except ImportError:
+    # python-dotenv not installed, use system env vars
+    pass
+
+from backend.api.routes import (
+    actions,
+    chat,
+    inbox,
+    planner,
+    rag,
+    sync,
+    accounts,
+    preferences,
+    dashboard,
+    agents,
+    calendar,
+    weather,
+)
 
 # Configure logging
 logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper())
@@ -85,6 +109,12 @@ app.include_router(actions.router, prefix="/api")
 app.include_router(sync.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(rag.router, prefix="/api")
+app.include_router(accounts.router, prefix="/api")
+app.include_router(preferences.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(agents.router, prefix="/api")
+app.include_router(calendar.router, prefix="/api")
+app.include_router(weather.router, prefix="/api")
 
 
 @app.exception_handler(Exception)

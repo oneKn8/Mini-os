@@ -1,9 +1,12 @@
 """
 Data ingestion and synchronization service.
+
+Enhanced with RAG indexing for semantic search capabilities.
 """
 
+import logging
 from datetime import datetime
-from typing import Dict
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -12,25 +15,217 @@ from backend.integrations.calendar import CalendarClient
 from backend.integrations.gmail import GmailClient
 from backend.integrations.outlook import OutlookClient
 
+logger = logging.getLogger(__name__)
+
+
+class RAGIndexer:
+    """
+    Indexes items into the vectorstore for semantic search.
+
+    This enables the RAG agent to search through emails, events,
+    and other user data using natural language queries.
+    """
+
+    def __init__(self):
+        self._vectorstore = None
+        self._embedder = None
+        self._initialized = False
+
+    def _init_vectorstore(self):
+        """Lazily initialize the vectorstore."""
+        if self._initialized:
+            return self._vectorstore is not None
+
+        self._initialized = True
+
+        try:
+            from backend.rag import (
+                get_embedding_model,
+                create_vectorstore_langchain,
+                is_rag_available,
+            )
+
+            if not is_rag_available():
+                logger.warning("RAG not available - indexing disabled")
+                return False
+
+            self._embedder = get_embedding_model()
+            self._vectorstore = create_vectorstore_langchain(self._embedder)
+            logger.info("RAG indexer initialized successfully")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to initialize RAG indexer: {e}")
+            return False
+
+    def index_item(self, item: Item) -> bool:
+        """
+        Index a single item into the vectorstore.
+
+        Args:
+            item: The Item to index
+
+        Returns:
+            True if indexed successfully
+        """
+        if not self._init_vectorstore():
+            return False
+
+        try:
+            from langchain_core.documents import Document
+
+            # Build document content
+            content_parts = []
+
+            if item.title:
+                content_parts.append(f"Subject: {item.title}")
+            if item.sender:
+                content_parts.append(f"From: {item.sender}")
+            if item.body_preview:
+                content_parts.append(item.body_preview)
+            if item.body_full and len(item.body_full) > len(item.body_preview or ""):
+                # Add full body if it has more content
+                content_parts.append(item.body_full[:2000])  # Limit size
+
+            content = "\n".join(content_parts)
+
+            if not content.strip():
+                return False
+
+            # Build metadata
+            metadata = {
+                "source": f"{item.source_type}:{item.id}",
+                "source_type": item.source_type,
+                "source_provider": item.source_provider,
+                "item_id": str(item.id),
+                "user_id": str(item.user_id),
+                "title": item.title or "",
+                "sender": item.sender or "",
+            }
+
+            if item.received_datetime:
+                metadata["received_date"] = item.received_datetime.isoformat()
+            if item.start_datetime:
+                metadata["start_date"] = item.start_datetime.isoformat()
+
+            # Create document
+            doc = Document(page_content=content, metadata=metadata)
+
+            # Add to vectorstore
+            self._vectorstore.add_documents([doc])
+            logger.debug(f"Indexed item {item.id}: {item.title[:50] if item.title else 'Untitled'}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to index item {item.id}: {e}")
+            return False
+
+    def index_items(self, items: List[Item]) -> int:
+        """
+        Index multiple items into the vectorstore.
+
+        Args:
+            items: List of Items to index
+
+        Returns:
+            Number of items successfully indexed
+        """
+        if not self._init_vectorstore():
+            return 0
+
+        indexed = 0
+        for item in items:
+            if self.index_item(item):
+                indexed += 1
+
+        logger.info(f"Indexed {indexed}/{len(items)} items")
+        return indexed
+
+    def search(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Search the vectorstore.
+
+        Args:
+            query: Search query
+            limit: Maximum results
+
+        Returns:
+            List of matching documents with metadata
+        """
+        if not self._init_vectorstore():
+            return []
+
+        try:
+            docs = self._vectorstore.similarity_search(query, k=limit)
+            return [
+                {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                }
+                for doc in docs
+            ]
+        except Exception as e:
+            logger.error(f"Search failed: {e}")
+            return []
+
+
+# Global indexer instance
+_indexer: Optional[RAGIndexer] = None
+
+
+def get_indexer() -> RAGIndexer:
+    """Get or create the global RAG indexer."""
+    global _indexer
+    if _indexer is None:
+        _indexer = RAGIndexer()
+    return _indexer
+
 
 class SyncService:
     """Service for syncing data from external providers."""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, enable_indexing: bool = True):
         self.db = db
+        self.enable_indexing = enable_indexing
+        self._indexer = get_indexer() if enable_indexing else None
+
+    def _index_items(self, items: List[Item]) -> int:
+        """Index items if indexing is enabled."""
+        if self._indexer and items:
+            return self._indexer.index_items(items)
+        return 0
 
     def sync_gmail(self, account: ConnectedAccount) -> int:
         """Sync emails from Gmail account."""
+        # Get client credentials from scopes JSONB or env vars
+        if account.scopes and isinstance(account.scopes, dict):
+            client_id = account.scopes.get("client_id")
+            client_secret = account.scopes.get("client_secret")
+        else:
+            # Fallback to reading from env/file
+            import os
+            import json
+
+            gmail_secret_path = os.getenv("GMAIL_CLIENT_SECRET_PATH")
+            if gmail_secret_path and os.path.exists(gmail_secret_path):
+                with open(gmail_secret_path) as f:
+                    creds_data = json.load(f)
+                    client_id = creds_data["installed"]["client_id"]
+                    client_secret = creds_data["installed"]["client_secret"]
+            else:
+                raise ValueError("Gmail client credentials not found")
+
         client = GmailClient.from_tokens(
             access_token=account.access_token,
             refresh_token=account.refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
-            client_id=account.raw_metadata.get("client_id"),
-            client_secret=account.raw_metadata.get("client_secret"),
+            client_id=client_id,
+            client_secret=client_secret,
         )
 
         messages = client.fetch_messages(max_results=50)
         count = 0
+        new_items = []
 
         for msg in messages:
             existing = (
@@ -59,9 +254,20 @@ class SyncService:
                     raw_metadata=msg["raw_metadata"],
                 )
                 self.db.add(item)
+                new_items.append(item)
                 count += 1
 
         self.db.commit()
+
+        # Refresh items to get IDs
+        for item in new_items:
+            self.db.refresh(item)
+
+        # Index new items for RAG
+        if new_items:
+            indexed = self._index_items(new_items)
+            logger.info(f"Gmail sync: {count} new emails, {indexed} indexed for search")
+
         account.last_sync_at = datetime.utcnow()
         self.db.commit()
 
@@ -77,6 +283,7 @@ class SyncService:
 
         messages = client.fetch_messages(max_results=50)
         count = 0
+        new_items = []
 
         for msg in messages:
             existing = (
@@ -105,9 +312,19 @@ class SyncService:
                     raw_metadata=msg["raw_metadata"],
                 )
                 self.db.add(item)
+                new_items.append(item)
                 count += 1
 
         self.db.commit()
+
+        # Refresh and index
+        for item in new_items:
+            self.db.refresh(item)
+
+        if new_items:
+            indexed = self._index_items(new_items)
+            logger.info(f"Outlook sync: {count} new emails, {indexed} indexed for search")
+
         account.last_sync_at = datetime.utcnow()
         self.db.commit()
 
@@ -115,16 +332,35 @@ class SyncService:
 
     def sync_calendar(self, account: ConnectedAccount) -> int:
         """Sync events from Google Calendar."""
+        # Get client credentials from scopes JSONB or env vars
+        if account.scopes and isinstance(account.scopes, dict):
+            client_id = account.scopes.get("client_id")
+            client_secret = account.scopes.get("client_secret")
+        else:
+            # Fallback to reading from env/file
+            import os
+            import json
+
+            calendar_secret_path = os.getenv("GOOGLE_CALENDAR_CLIENT_SECRET_PATH")
+            if calendar_secret_path and os.path.exists(calendar_secret_path):
+                with open(calendar_secret_path) as f:
+                    creds_data = json.load(f)
+                    client_id = creds_data["installed"]["client_id"]
+                    client_secret = creds_data["installed"]["client_secret"]
+            else:
+                raise ValueError("Calendar client credentials not found")
+
         client = CalendarClient.from_tokens(
             access_token=account.access_token,
             refresh_token=account.refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
-            client_id=account.raw_metadata.get("client_id"),
-            client_secret=account.raw_metadata.get("client_secret"),
+            client_id=client_id,
+            client_secret=client_secret,
         )
 
         events = client.fetch_events(days_ahead=14)
         count = 0
+        new_items = []
 
         for event in events:
             existing = (
@@ -155,6 +391,7 @@ class SyncService:
                     raw_metadata=event["raw_metadata"],
                 )
                 self.db.add(item)
+                new_items.append(item)
                 count += 1
             else:
                 # Update existing event
@@ -163,6 +400,15 @@ class SyncService:
                 existing.end_datetime = event["end_datetime"]
 
         self.db.commit()
+
+        # Refresh and index
+        for item in new_items:
+            self.db.refresh(item)
+
+        if new_items:
+            indexed = self._index_items(new_items)
+            logger.info(f"Calendar sync: {count} new events, {indexed} indexed for search")
+
         account.last_sync_at = datetime.utcnow()
         self.db.commit()
 
@@ -186,6 +432,36 @@ class SyncService:
                 elif account.provider == "google_calendar":
                     results["google_calendar"] = self.sync_calendar(account)
             except Exception as e:
+                logger.error(f"Sync failed for {account.provider}: {e}")
                 results[account.provider] = f"Error: {str(e)}"
 
         return results
+
+    def reindex_all_items(self, user_id: Optional[str] = None) -> int:
+        """
+        Reindex all items in the vectorstore.
+
+        Useful for rebuilding the search index after schema changes
+        or if the vectorstore was cleared.
+
+        Args:
+            user_id: Optional user ID to filter by
+
+        Returns:
+            Number of items indexed
+        """
+        if not self._indexer:
+            logger.warning("Indexing not enabled")
+            return 0
+
+        query = self.db.query(Item)
+        if user_id:
+            query = query.filter(Item.user_id == user_id)
+
+        items = query.all()
+        logger.info(f"Reindexing {len(items)} items...")
+
+        indexed = self._indexer.index_items(items)
+        logger.info(f"Reindex complete: {indexed}/{len(items)} items indexed")
+
+        return indexed

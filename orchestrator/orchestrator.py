@@ -414,3 +414,47 @@ class Orchestrator:
                     yield {"type": "approval_required", "agent": "action_executor", "proposals": pending}
         except Exception as e:
             logger.warning(f"Failed to check workflow state for interrupts: {e}")
+
+    async def resume(self, user_id: str, db_session: Session = None):
+        """Resume workflow execution from checkpoint after approval."""
+        config = {"configurable": {"thread_id": user_id, "db": db_session}}
+        target_nodes = {"triage", "safety", "email", "event", "planner", "preference", "rag", "action_executor"}
+
+        try:
+            snapshot = self.workflow.get_state(config)
+            if not snapshot.next:
+                logger.warning(f"No pending workflow state found for user {user_id}")
+                return
+
+            # Continue from where we left off
+            async for event in self.workflow.astream_events(None, version="v2", config=config):
+                kind = event["event"]
+                name = event["name"]
+
+                # Node Start
+                if kind == "on_chain_start" and name in target_nodes:
+                    yield {
+                        "type": "thought",
+                        "agent": name,
+                        "status": "running",
+                        "log": {"message": f"Resuming {name} agent..."},
+                    }
+
+                # Node End (Success)
+                elif kind == "on_chain_end" and name in target_nodes:
+                    output = event["data"].get("output")
+                    if output and isinstance(output, dict):
+                        agent_logs = output.get("agent_logs", [])
+                        if agent_logs:
+                            latest_log = agent_logs[-1]
+                            if latest_log.get("agent") == name:
+                                yield {
+                                    "type": "thought",
+                                    "agent": name,
+                                    "status": latest_log.get("status"),
+                                    "summary": latest_log.get("output_summary"),
+                                    "log": latest_log,
+                                }
+        except Exception as e:
+            logger.error(f"Failed to resume workflow: {e}", exc_info=True)
+            yield {"type": "error", "error": f"Failed to resume workflow: {str(e)}"}

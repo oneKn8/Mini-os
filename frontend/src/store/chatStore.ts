@@ -5,9 +5,23 @@ import type { ChatMessage } from '../types/chat'
 export interface Thought {
   agent: string
   status: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   summary?: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   log?: any
   duration_ms?: number
+}
+
+export interface ReasoningStep {
+  content: string
+  step: string
+  tool?: string
+}
+
+export interface SuggestedAction {
+  text: string
+  action: string
+  payload: string
 }
 
 export interface ChatState {
@@ -15,7 +29,11 @@ export interface ChatState {
   messages: ChatMessage[]
   isStreaming: boolean
   currentThoughts: Thought[]
+  currentReasoning: ReasoningStep[]
+  suggestedActions: SuggestedAction[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pendingApprovals: any[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sessions: any[]
   currentSessionId: string | null
   selectedModel: { provider: string, name: string } | null
@@ -23,11 +41,15 @@ export interface ChatState {
   toggleChat: () => void
   setOpen: (isOpen: boolean) => void
   setModel: (provider: string, name: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendMessage: (content: string, context?: any) => Promise<void>
-  handleApproval: (proposalId: string, approved: boolean) => Promise<void>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handleApproval: (proposalId: string, approved: boolean, editedPayload?: any) => Promise<void>
+  resumeWorkflow: () => Promise<void>
   loadHistory: (sessionId?: string) => Promise<void>
   loadSessions: () => Promise<void>
   clearHistory: () => void
+  sendSuggestedAction: (action: SuggestedAction) => Promise<void>
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -35,6 +57,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isStreaming: false,
   currentThoughts: [],
+  currentReasoning: [],
+  suggestedActions: [],
   pendingApprovals: [],
   sessions: [],
   currentSessionId: null,
@@ -57,10 +81,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((state) => ({ 
         messages: [...state.messages, userMessage],
         isStreaming: true,
-        currentThoughts: []
+        currentThoughts: [],
+        currentReasoning: [],
+        suggestedActions: []
     }))
 
     try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const requestPayload: any = { 
             content, 
             context, 
@@ -77,6 +104,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
         for await (const event of stream) {
             if (event.type === 'session_id') {
                 set({ currentSessionId: event.session_id })
+            } else if (event.type === 'reasoning') {
+                // Chain of thought - visible reasoning
+                set((state) => ({
+                    currentReasoning: [...state.currentReasoning, {
+                        content: event.content,
+                        step: event.step,
+                        tool: event.tool
+                    }]
+                }))
             } else if (event.type === 'thought') {
                 set((state) => {
                     // Check if we already have a thought for this agent
@@ -91,6 +127,27 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         return { currentThoughts: [...state.currentThoughts, event] }
                     }
                 })
+            } else if (event.type === 'tool_start') {
+                // Tool starting - add to reasoning
+                set((state) => ({
+                    currentReasoning: [...state.currentReasoning, {
+                        content: `${event.icon} ${event.action}...`,
+                        step: 'tool',
+                        tool: event.tool
+                    }]
+                }))
+            } else if (event.type === 'insight') {
+                // Key insight from tool - add to reasoning
+                set((state) => ({
+                    currentReasoning: [...state.currentReasoning, {
+                        content: `[Insight] ${event.content}`,
+                        step: 'insight',
+                        tool: event.source
+                    }]
+                }))
+            } else if (event.type === 'suggestions') {
+                // Follow-up suggestions
+                set({ suggestedActions: event.actions || [] })
             } else if (event.type === 'approval_required') {
                 set((state) => ({
                     pendingApprovals: [...state.pendingApprovals, ...event.proposals]
@@ -104,7 +161,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     metadata: event.metadata
                 }
                 set((state) => ({
-                    messages: [...state.messages, assistantMessage]
+                    messages: [...state.messages, assistantMessage],
+                    currentReasoning: [] // Clear reasoning after response
                 }))
             } else if (event.type === 'error') {
                  console.error(event.error)
@@ -138,7 +196,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
   
-  handleApproval: async (proposalId, approved) => {
+  handleApproval: async (proposalId, approved, editedPayload) => {
       // Optimistically remove from list
       set((state) => ({
           pendingApprovals: state.pendingApprovals.filter(p => p.id !== proposalId)
@@ -147,11 +205,73 @@ export const useChatStore = create<ChatState>((set, get) => ({
       // Send to API
       try {
           await chatAPI.sendApproval(proposalId, approved)
-          // We should probably re-trigger streaming or wait for socket update?
-          // For now, assume user manually resumes conversation or we auto-resume in backend
+          
+          // If approved, resume workflow
+          if (approved) {
+              // Update proposal payload if edited
+              if (editedPayload) {
+                  // In a real app, we'd update the proposal in DB via API
+                  // For now, we'll just resume and let backend handle it
+              }
+              
+              // Resume workflow
+              await get().resumeWorkflow()
+          }
       } catch (e) {
           console.error("Failed to submit approval", e)
           // Revert?
+      }
+  },
+  
+  resumeWorkflow: async () => {
+      const { currentSessionId } = get()
+      if (!currentSessionId) return
+      
+      set({ isStreaming: true, currentThoughts: [] })
+      
+      try {
+          const stream = chatAPI.resumeWorkflow(currentSessionId)
+          
+          for await (const event of stream) {
+              if (event.type === 'thought') {
+                  set((state) => {
+                      const existingIdx = state.currentThoughts.findIndex(t => t.agent === event.agent)
+                      if (existingIdx !== -1) {
+                          const newThoughts = [...state.currentThoughts]
+                          newThoughts[existingIdx] = { ...newThoughts[existingIdx], ...event }
+                          return { currentThoughts: newThoughts }
+                      } else {
+                          return { currentThoughts: [...state.currentThoughts, event] }
+                      }
+                  })
+              } else if (event.type === 'message') {
+                  const assistantMessage: ChatMessage = {
+                      id: Date.now().toString(),
+                      content: event.content,
+                      sender: 'assistant',
+                      timestamp: new Date().toISOString(),
+                      metadata: event.metadata
+                  }
+                  set((state) => ({
+                      messages: [...state.messages, assistantMessage]
+                  }))
+              } else if (event.type === 'error') {
+                  console.error(event.error)
+                  const errorMessage: ChatMessage = {
+                      id: Date.now().toString(),
+                      content: `Error: ${event.error}`,
+                      sender: 'assistant',
+                      timestamp: new Date().toISOString()
+                  }
+                  set((state) => ({
+                      messages: [...state.messages, errorMessage]
+                  }))
+              }
+          }
+      } catch (e) {
+          console.error("Failed to resume workflow", e)
+      } finally {
+          set({ isStreaming: false })
       }
   },
   
@@ -175,6 +295,19 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearHistory: () => {
       chatAPI.clearSession()
-      set({ messages: [], currentSessionId: null })
+      set({ messages: [], currentSessionId: null, suggestedActions: [] })
+  },
+
+  sendSuggestedAction: async (action: SuggestedAction) => {
+      // Handle suggested action based on type
+      if (action.action === 'message') {
+          // Send the payload as a message
+          await get().sendMessage(action.payload)
+      } else if (action.action === 'navigate') {
+          // Navigate to the path
+          window.dispatchEvent(new CustomEvent('chat-navigate', { detail: action.payload }))
+      }
+      // Clear suggestions after use
+      set({ suggestedActions: [] })
   }
 }))

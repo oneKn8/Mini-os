@@ -1,0 +1,46 @@
+═══════════════════════════════════════════════════════════
+  Google Cloud Console Setup Checklist
+═══════════════════════════════════════════════════════════
+
+□ Step 1: Access Google Cloud Console
+  → https://console.cloud.google.com/
+  → Sign in with your Google account
+
+□ Step 2: Create New Project
+  → Click project dropdown → "New Project"
+  → Name: "Personal Ops Center"
+  → Click "Create"
+
+□ Step 3: Enable APIs
+  → APIs & Services → Library
+  → Enable "Gmail API"
+  → Enable "Google Calendar API"
+
+□ Step 4: Configure OAuth Consent Screen
+  → APIs & Services → OAuth consent screen
+  → Select "External"
+  → App name: "Personal Ops Center"
+  → Add scopes:
+    • gmail.readonly
+    • gmail.compose
+    • calendar
+  → Add your email as test user
+  → Save
+
+□ Step 5: Create OAuth Credentials
+  → APIs & Services → Credentials
+  → Create Credentials → OAuth client ID
+  → Application type: "Desktop app"
+  → Name: "Personal Ops Center - Desktop"
+  → Download JSON file
+
+□ Step 6: Install Credentials
+  → Run: ./setup_google_oauth.sh
+  → OR manually copy JSON to secrets/ directory
+
+□ Step 7: Verify
+  → Check secrets/ directory has JSON files
+  → Check .env has correct paths
+  → Start application and authorize
+
+═══════════════════════════════════════════════════════════

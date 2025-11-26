@@ -2,49 +2,122 @@
 @import "tailwindcss";
 
 @theme {
-  /* Custom Color Palette */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f8f9fa;
-  --color-bg-tertiary: #f1f3f5;
+  /* Beast Mode Dark Theme Color Palette */
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #050505; /* Slightly lighter black for subtle separation */
+  --color-bg-tertiary: #0a0a0a;
 
-  --color-surface: #ffffff;
-  --color-surface-hover: #f8f9fa;
+  --color-surface: rgba(10, 10, 10, 0.8); /* Slightly transparent for glass effect */
+  --color-surface-hover: rgba(20, 20, 20, 0.9);
 
-  --color-border-light: #e9ecef;
-  --color-border-medium: #dee2e6;
-  --color-border-dark: #ced4da;
+  --color-border-light: rgba(255, 255, 255, 0.08);
+  --color-border-medium: rgba(255, 255, 255, 0.12);
+  --color-border-dark: rgba(255, 255, 255, 0.18);
 
-  --color-text-primary: #212529;
-  --color-text-secondary: #495057;
-  --color-text-tertiary: #868e96;
-  --color-text-muted: #adb5bd;
+  --color-text-primary: #faf9f6;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #606060;
+  --color-text-muted: #404040;
 
+  /* Electric/Neon Accents */
   --color-accent-primary: #4c6ef5;
   --color-accent-primary-hover: #3b5bdb;
+  --color-accent-primary-glow: rgba(76, 110, 245, 0.4);
+  
   --color-accent-secondary: #7950f2;
-  --color-accent-success: #12b886;
-  --color-accent-warning: #fab005;
-  --color-accent-error: #f03e3e;
-  --color-accent-info: #339af0;
+  --color-accent-secondary-glow: rgba(121, 80, 242, 0.4);
 
-  /* Fonts */
-  --font-sans: "Inter", sans-serif;
+  --color-accent-success: #12b886;
+  --color-accent-success-glow: rgba(18, 184, 134, 0.4);
+
+  --color-accent-warning: #fab005;
+  --color-accent-warning-glow: rgba(250, 176, 5, 0.4);
+
+  --color-accent-error: #fa5252;
+  --color-accent-error-glow: rgba(250, 82, 82, 0.4);
+  
+  --color-accent-info: #339af0;
+  --color-accent-info-glow: rgba(51, 154, 240, 0.4);
+
+  /* Fonts - Avenir with fallbacks */
+  --font-sans: "Avenir", "Avenir Next", -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
 }
 
-/* Custom Utility Classes via v4 syntax if needed, or just standard CSS */
 @layer base {
   body {
-    @apply bg-bg-secondary text-text-primary font-sans antialiased;
+    @apply bg-bg-primary text-text-primary font-sans antialiased overflow-hidden;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(76, 110, 245, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(121, 80, 242, 0.02) 0%, transparent 40%);
+  }
+  
+  /* Smooth transitions */
+  * {
+    @apply border-border-light;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-dark rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-text-tertiary;
+  }
+}
+
+/* Utility Classes */
+@layer components {
+  .glass-panel {
+    @apply bg-surface backdrop-blur-xl border border-border-light shadow-lg;
+  }
+  
+  .glass-panel-hover {
+    @apply hover:bg-surface-hover hover:border-border-medium transition-all duration-300 hover:shadow-xl hover:shadow-black/50;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px currentColor;
+  }
+
+  .neon-border {
+    box-shadow: 0 0 10px var(--color-accent-primary-glow), inset 0 0 5px var(--color-accent-primary-glow);
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
 /* Animations */
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }
 
-.spinner-large {
-  @apply h-12 w-12 animate-spin rounded-full border-4 border-border-medium border-t-accent-primary;
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
 }

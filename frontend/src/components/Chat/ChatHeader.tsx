@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, MessageSquare, Plus, Settings, Cpu } from 'lucide-react'
+import { ChevronDown, MessageSquare, Plus, Cpu } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
 import { clsx } from 'clsx'
 
@@ -20,6 +20,7 @@ export default function ChatHeader() {
       if (isHistoryOpen) {
           loadSessions()
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isHistoryOpen])
 
   const handleSelectSession = (sessionId: string) => {

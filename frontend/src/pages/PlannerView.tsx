@@ -1,10 +1,10 @@
-import { Calendar, ArrowLeft, ArrowRight, Clock, AlertCircle } from 'lucide-react'
+import { Calendar, ArrowLeft, ArrowRight } from 'lucide-react'
 
 function PlannerView() {
   return (
     <div className="space-y-8 fade-in pb-20">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-text-primary">Weekly Planner</h1>
+        <h1 className="text-3xl font-bold text-white text-glow">Weekly Planner</h1>
         <div className="flex items-center gap-2 bg-surface p-1 rounded-lg border border-border-light shadow-sm">
           <button className="p-2 rounded-md hover:bg-bg-secondary text-text-secondary transition-colors">
             <ArrowLeft size={20} />

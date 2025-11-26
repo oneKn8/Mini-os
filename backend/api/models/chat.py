@@ -15,13 +15,14 @@ class ChatSession(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "chat_sessions"
 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    title = Column(String(200), nullable=True)  # Generated from first message
     status = Column(String(20), default="active")
     session_metadata = Column("metadata", JSONB)
 
     messages = relationship("ChatMessageEntry", back_populates="session", cascade="all, delete-orphan")
 
     def __repr__(self):
-        return f"<ChatSession(id={self.id}, status={self.status})>"
+        return f"<ChatSession(id={self.id}, title={self.title}, status={self.status})>"
 
 
 class ChatMessageEntry(Base, UUIDMixin, TimestampMixin):

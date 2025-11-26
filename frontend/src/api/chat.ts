@@ -1,6 +1,7 @@
 export interface SendMessageRequest {
   content: string
   sessionId?: string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   context?: any
   modelProvider?: string
   modelName?: string
@@ -16,10 +17,12 @@ export interface ChatMessage {
   content: string
   sender: 'user' | 'assistant'
   timestamp: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   metadata?: any
 }
 
 // Use relative URLs to go through Vite proxy, or use env variable if set
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || ''
 
 const SESSION_STORAGE_KEY = 'ops-center-chat-session'
@@ -68,6 +71,7 @@ export class ChatAPI {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async *streamMessage(request: SendMessageRequest): AsyncGenerator<any, void, unknown> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
@@ -123,6 +127,7 @@ export class ChatAPI {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async sendApproval(actionId: string, approved: boolean): Promise<any> {
     if (!this.sessionId) throw new Error("No session active")
     
@@ -137,6 +142,54 @@ export class ChatAPI {
     } catch (error) {
         console.error('Error sending approval:', error)
         throw error
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async *resumeWorkflow(sessionId: string, userId: string = "default_user"): AsyncGenerator<any, void, unknown> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/chat/resume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId, user_id: userId }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error('Response body is null')
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const event = JSON.parse(line)
+              yield event
+            } catch (e) {
+              console.error("Failed to parse stream line", line, e)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error resuming workflow:', error)
+      throw error
     }
   }
   
@@ -160,6 +213,7 @@ export class ChatAPI {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async getSessions(): Promise<any[]> {
       try {
           const response = await fetch(`${API_BASE_URL}/api/chat/sessions`)

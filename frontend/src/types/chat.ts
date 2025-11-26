@@ -8,9 +8,13 @@ export interface ChatMessage {
 
 export interface ChatSession {
   id: string
-  messages: ChatMessage[]
-  createdAt: Date
-  updatedAt: Date
+  title: string
+  messages?: ChatMessage[]
+  message_count?: number
+  created_at?: string
+  updated_at?: string
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface SendMessageRequest {

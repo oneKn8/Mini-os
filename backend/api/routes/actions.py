@@ -20,7 +20,7 @@ async def get_pending_actions(db: Session = Depends(get_db)):
     proposals = (
         db.query(ActionProposal)
         .filter(ActionProposal.status == "pending")
-        .order_by(ActionProposal.proposed_at.desc())
+        .order_by(ActionProposal.created_at.desc())
         .all()
     )
 
@@ -32,7 +32,7 @@ async def get_pending_actions(db: Session = Depends(get_db)):
             "explanation": p.explanation,
             "risk_level": p.risk_level,
             "payload": p.payload,
-            "proposed_at": p.proposed_at.isoformat(),
+            "proposed_at": p.created_at.isoformat(),
         }
         for p in proposals
     ]

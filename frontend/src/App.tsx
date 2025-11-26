@@ -6,6 +6,10 @@ import PlannerView from './pages/PlannerView'
 import ActionsView from './pages/ActionsView'
 import SettingsView from './pages/SettingsView'
 import ChatView from './pages/ChatView'
+import DashboardView from './pages/DashboardView'
+import CalendarView from './pages/CalendarView'
+import WeatherView from './pages/WeatherView'
+import AgentsView from './pages/AgentsView'
 
 function App() {
   return (
@@ -17,11 +21,15 @@ function App() {
     >
       <Routes>
         <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/today" replace />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardView />} />
           <Route path="today" element={<TodayView />} />
           <Route path="inbox" element={<InboxView />} />
+          <Route path="calendar" element={<CalendarView />} />
+          <Route path="weather" element={<WeatherView />} />
           <Route path="planner" element={<PlannerView />} />
           <Route path="actions" element={<ActionsView />} />
+          <Route path="agents" element={<AgentsView />} />
           <Route path="settings" element={<SettingsView />} />
         </Route>
         <Route path="/chat" element={<ChatView />} />

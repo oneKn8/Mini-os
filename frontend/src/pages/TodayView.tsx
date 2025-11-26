@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { Sun, Cloud, Calendar, Clock, CheckCircle2, ArrowRight, Sparkles, Zap, Coffee, Users, Target, Layers } from 'lucide-react'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { Sun, Calendar, Clock, CheckCircle2, Sparkles, Zap, Coffee, Users, Target, Layers } from 'lucide-react'
 import { clsx } from 'clsx'
 
 interface TimeBlock {
@@ -155,9 +155,9 @@ export default function TodayView() {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    {plan.priorities.map((priority, index) => (
+                    {plan.priorities.map((priority, idx) => (
                         <motion.div
-                            key={index}
+                            key={idx}
                             variants={item}
                             whileHover={{ y: -4 }}
                             className="group relative overflow-hidden rounded-2xl bg-surface p-5 shadow-sm border border-border-light hover:shadow-md transition-all"
@@ -166,7 +166,7 @@ export default function TodayView() {
                             
                             <div className="relative z-10">
                                 <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary font-bold text-sm">
-                                    {index + 1}
+                                    {idx + 1}
                                 </div>
                                 <p className="font-medium text-text-primary line-clamp-2">{priority}</p>
                             </div>
@@ -193,7 +193,7 @@ export default function TodayView() {
                     {/* Timeline line */}
                     <div className="absolute left-8 top-4 bottom-4 w-px bg-border-medium/50 hidden md:block"></div>
 
-                    {plan.time_blocks.map((block, index) => (
+                    {plan.time_blocks.map((block) => (
                         <motion.div
                             key={block.id}
                             variants={item}
