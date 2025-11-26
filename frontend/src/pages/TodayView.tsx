@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import './TodayView.css'
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { Sun, Cloud, Calendar, Clock, CheckCircle2, ArrowRight, Sparkles, Zap, Coffee, Users, Target, Layers } from 'lucide-react'
+import { clsx } from 'clsx'
 
 interface TimeBlock {
   id: string
@@ -22,10 +24,14 @@ interface DailyPlan {
   }
 }
 
-function TodayView() {
+export default function TodayView() {
   const [plan, setPlan] = useState<DailyPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
+  
+  const { scrollY } = useScroll()
+  const headerY = useTransform(scrollY, [0, 200], [0, 50])
+  const headerOpacity = useTransform(scrollY, [0, 200], [1, 0.8])
 
   useEffect(() => {
     fetchDailyPlan()
@@ -54,186 +60,215 @@ function TodayView() {
     return 'Good evening'
   }
 
-  const formatDate = () => {
-    return currentTime.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    })
-  }
-
-  const formatTime = () => {
-    return currentTime.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    })
-  }
-
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case "focus":
-        return 'Focus'
-      case "meeting":
-        return 'Meeting'
-      case "break":
-        return 'Break'
-      case "task":
-        return 'Task'
-      default:
-        return '.'
+      case "focus": return <Target size={16} className="text-accent-primary" />
+      case "meeting": return <Users size={16} className="text-accent-secondary" />
+      case "break": return <Coffee size={16} className="text-accent-info" />
+      case "task": return <CheckCircle2 size={16} className="text-accent-success" />
+      default: return <Clock size={16} className="text-text-tertiary" />
     }
   }
-
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "focus":
-        return 'var(--color-accent-primary)'
-      case "meeting":
-        return 'var(--color-accent-secondary)'
-      case "break":
-        return 'var(--color-accent-info)'
-      case "task":
-        return 'var(--color-accent-success)'
-      default:
-        return 'var(--color-accent-primary)'
+  
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
     }
+  }
+  
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
   }
 
   if (loading) {
     return (
-      <div className="today-view">
-        <div className="loading-state">
-          <div className="spinner-large"></div>
-          <p>Loading your day...</p>
+      <div className="flex h-[60vh] w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-border-light border-t-accent-primary"></div>
+            <p className="text-text-secondary animate-pulse">Planning your day...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="today-view fade-in">
-      {/* Hero Header */}
-      <div className="hero-header glass-strong">
-        <div className="hero-content">
-          <div className="greeting-section">
-            <h1 className="greeting">{getGreeting()} Sparkle</h1>
-            <p className="date-time">
-              <span className="date">{formatDate()}</span>
-              <span className="time-divider">.</span>
-              <span className="time">{formatTime()}</span>
-            </p>
-          </div>
-          
-          {plan?.weather && (
-            <div className="weather-widget">
-              <div className="weather-icon">{plan.weather.icon}</div>
-              <div className="weather-info">
-                <div className="weather-temp">{plan.weather.temp}°</div>
-                <div className="weather-condition">{plan.weather.condition}</div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+    <div className="space-y-8 pb-20">
+        {/* Hero Section */}
+        <motion.div 
+            style={{ y: headerY, opacity: headerOpacity }}
+            className="relative overflow-hidden rounded-3xl bg-surface p-8 shadow-sm border border-border-light"
+        >
+             <div className="absolute top-0 right-0 -mt-10 -mr-10 h-64 w-64 rounded-full bg-accent-primary/5 blur-3xl"></div>
+             <div className="absolute bottom-0 left-0 -mb-10 -ml-10 h-48 w-48 rounded-full bg-accent-secondary/5 blur-3xl"></div>
+             
+             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                 <div>
+                     <div className="flex items-center gap-2 text-accent-primary mb-2">
+                         <Sparkles size={18} />
+                         <span className="text-sm font-semibold uppercase tracking-wider">Daily Overview</span>
+                     </div>
+                     <h1 className="text-4xl font-bold tracking-tight text-text-primary mb-2">
+                         {getGreeting()}, Sparkle
+                     </h1>
+                     <p className="text-text-secondary text-lg">
+                         {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                     </p>
+                 </div>
 
-      {/* Daily Summary */}
-      {plan?.summary && (
-        <div className="summary-card glass slide-in">
-          <div className="card-header">
-            <h2>Today's Focus</h2>
-            <div className="pulse-indicator"></div>
-          </div>
-          <p className="summary-text">{plan.summary}</p>
-        </div>
-      )}
-
-      {/* Priorities */}
-      {plan?.priorities && plan.priorities.length > 0 && (
-        <div className="priorities-section slide-in">
-          <h3 className="section-title">
-            <span className="title-icon">Lightning</span>
-            Top Priorities
-          </h3>
-          <div className="priorities-grid">
-            {plan.priorities.map((priority, index) => (
-              <div
-                key={index}
-                className="priority-card"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <div className="priority-number" style={{ background: getTypeColor("focus") }}>
-                  {index + 1}
-                </div>
-                <p className="priority-text">{priority}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Time Blocks */}
-      {plan?.time_blocks && plan.time_blocks.length > 0 && (
-        <div className="time-blocks-section slide-in">
-          <h3 className="section-title">
-            <span className="title-icon">Calendar</span>
-            Your Schedule
-          </h3>
-          <div className="time-blocks-list">
-            {plan.time_blocks.map((block, index) => (
-              <div
-                key={block.id}
-                className={`time-block ${block.completed ? 'completed' : ''}`}
-                style={{ animationDelay: `${index * 80}ms` }}
-              >
-                <div className="block-indicator" style={{ background: getTypeColor(block.type) }}></div>
-                <div className="block-content">
-                  <div className="block-header">
-                    <div className="block-time">{block.time}</div>
-                    <div className="block-type">
-                      <span>{getTypeIcon(block.type)}</span>
-                      <span className="type-label">{block.type}</span>
+                 {plan?.weather && (
+                    <div className="flex items-center gap-4 rounded-2xl bg-bg-secondary/50 p-4 backdrop-blur-sm border border-border-light">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface shadow-sm text-accent-warning">
+                            <Sun size={24} />
+                        </div>
+                        <div>
+                            <div className="text-2xl font-bold text-text-primary">{plan.weather.temp}°</div>
+                            <div className="text-sm text-text-secondary capitalize">{plan.weather.condition}</div>
+                        </div>
                     </div>
-                  </div>
-                  <h4 className="block-title">{block.title}</h4>
-                  <div className="block-duration">{block.duration} min</div>
-                </div>
-                {block.completed && (
-                  <div className="completed-badge">
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                 )}
+             </div>
 
-      {/* Empty State */}
-      {!plan && (
-        <div className="empty-state scale-in">
-          <div className="empty-icon">Board</div>
-          <h3>No plan for today yet</h3>
-          <p>Run the planner agent to generate your daily schedule</p>
-          <button className="cta-button">
-            <span>Generate Plan</span>
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
-      )}
+             {plan?.summary && (
+                 <div className="mt-8 max-w-2xl">
+                     <p className="text-text-secondary leading-relaxed border-l-2 border-accent-primary/30 pl-4">
+                         {plan.summary}
+                     </p>
+                 </div>
+             )}
+        </motion.div>
+
+        {/* Priorities */}
+        {plan?.priorities && plan.priorities.length > 0 && (
+            <motion.div 
+                variants={container}
+                initial="hidden"
+                animate="show"
+            >
+                <div className="flex items-center gap-2 mb-4 px-1">
+                    <Zap size={20} className="text-accent-warning" />
+                    <h2 className="text-lg font-semibold text-text-primary">Top Priorities</h2>
+                </div>
+                
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    {plan.priorities.map((priority, index) => (
+                        <motion.div
+                            key={index}
+                            variants={item}
+                            whileHover={{ y: -4 }}
+                            className="group relative overflow-hidden rounded-2xl bg-surface p-5 shadow-sm border border-border-light hover:shadow-md transition-all"
+                        >
+                            <div className="absolute top-0 right-0 h-20 w-20 translate-x-10 -translate-y-10 rounded-full bg-accent-primary/5 group-hover:bg-accent-primary/10 transition-colors"></div>
+                            
+                            <div className="relative z-10">
+                                <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary font-bold text-sm">
+                                    {index + 1}
+                                </div>
+                                <p className="font-medium text-text-primary line-clamp-2">{priority}</p>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </motion.div>
+        )}
+
+        {/* Schedule */}
+        {plan?.time_blocks && plan.time_blocks.length > 0 ? (
+             <motion.div 
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="space-y-4"
+            >
+                <div className="flex items-center gap-2 mb-4 px-1 pt-4">
+                    <Calendar size={20} className="text-accent-primary" />
+                    <h2 className="text-lg font-semibold text-text-primary">Today's Schedule</h2>
+                </div>
+
+                <div className="relative space-y-0">
+                    {/* Timeline line */}
+                    <div className="absolute left-8 top-4 bottom-4 w-px bg-border-medium/50 hidden md:block"></div>
+
+                    {plan.time_blocks.map((block, index) => (
+                        <motion.div
+                            key={block.id}
+                            variants={item}
+                            className="group relative flex flex-col md:flex-row gap-4 rounded-xl hover:bg-surface p-3 transition-colors"
+                        >
+                            {/* Time Column */}
+                            <div className="md:w-32 flex md:flex-col items-center md:items-end justify-start pt-1 md:pr-8 z-10">
+                                <span className="text-sm font-semibold text-text-primary font-mono">{block.time}</span>
+                                <span className="text-xs text-text-tertiary ml-2 md:ml-0">{block.duration}m</span>
+                                
+                                {/* Timeline dot */}
+                                <div className={clsx(
+                                    "hidden md:block absolute right-[-5px] w-2.5 h-2.5 rounded-full border-2 border-bg-secondary mt-1.5",
+                                    block.completed ? "bg-accent-success" : "bg-accent-primary"
+                                )}></div>
+                            </div>
+
+                            {/* Content Card */}
+                            <div className={clsx(
+                                "flex-1 rounded-xl border p-4 transition-all",
+                                block.completed 
+                                    ? "bg-surface/50 border-border-light opacity-60" 
+                                    : "bg-surface border-border-light shadow-sm group-hover:border-accent-primary/30"
+                            )}>
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className={clsx(
+                                            "p-2 rounded-lg shrink-0",
+                                            "bg-bg-secondary"
+                                        )}>
+                                            {getTypeIcon(block.type)}
+                                        </div>
+                                        <div>
+                                            <h3 className={clsx(
+                                                "font-semibold text-text-primary",
+                                                block.completed && "line-through"
+                                            )}>{block.title}</h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className={clsx(
+                                                    "text-xs px-2 py-0.5 rounded-full font-medium capitalize",
+                                                    block.type === 'focus' && "bg-accent-primary/10 text-accent-primary",
+                                                    block.type === 'meeting' && "bg-accent-secondary/10 text-accent-secondary",
+                                                    block.type === 'break' && "bg-accent-info/10 text-accent-info",
+                                                    block.type === 'task' && "bg-accent-success/10 text-accent-success"
+                                                )}>
+                                                    {block.type}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {block.completed && (
+                                        <div className="text-accent-success">
+                                            <CheckCircle2 size={20} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            </motion.div>
+        ) : (
+            !plan && (
+                <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border-dark/30 bg-surface/50 p-12 text-center">
+                    <div className="mb-4 rounded-full bg-bg-secondary p-4">
+                        <Layers size={32} className="text-text-tertiary" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-text-primary">No plan for today yet</h3>
+                    <p className="mt-2 text-text-secondary max-w-sm">
+                        Ask the assistant to generate your daily schedule based on your tasks and meetings.
+                    </p>
+                </div>
+            )
+        )}
     </div>
   )
 }
-
-export default TodayView

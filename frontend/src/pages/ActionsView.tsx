@@ -1,5 +1,18 @@
 import { useEffect, useState } from 'react'
-import './ActionsView.css'
+import { motion } from 'framer-motion'
+import { 
+    Mail, 
+    Calendar, 
+    CheckSquare, 
+    Clock, 
+    CheckCircle2, 
+    XCircle, 
+    User, 
+    MapPin,
+    MessageSquare,
+    Filter
+} from 'lucide-react'
+import { clsx } from 'clsx'
 
 interface Action {
   id: string
@@ -19,7 +32,7 @@ interface Action {
   }
 }
 
-function ActionsView() {
+export default function ActionsView() {
   const [actions, setActions] = useState<Action[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'pending' | 'all'>('pending')
@@ -61,173 +74,195 @@ function ActionsView() {
   }
 
   const getTypeIcon = (type: string) => {
-    const icons: Record<string, string> = {
-      email_reply: 'Email',
-      calendar_event: 'Calendar',
-      task_create: 'Task',
-      reminder: 'Reminder',
-    }
-    return icons[type] || 'Action'
-  }
-
-  const getTypeColor = (type: string) => {
     switch (type) {
-      case 'email_reply':
-        return 'var(--color-accent-primary)'
-      case 'calendar_event':
-        return 'var(--color-accent-secondary)'
-      case 'task_create':
-        return 'var(--color-accent-success)'
-      case 'reminder':
-        return 'var(--color-accent-warning)'
-      default:
-        return 'var(--color-accent-primary)'
+      case 'email_reply': return <Mail size={18} className="text-accent-primary" />
+      case 'calendar_event': return <Calendar size={18} className="text-accent-secondary" />
+      case 'task_create': return <CheckSquare size={18} className="text-accent-success" />
+      case 'reminder': return <Clock size={18} className="text-accent-warning" />
+      default: return <CheckCircle2 size={18} className="text-accent-primary" />
     }
   }
-
+  
   const filteredActions = actions.filter(a => 
     filter === 'all' || a.status === 'pending'
   )
 
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  }
+  
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  }
+
   if (loading) {
-    return (
-      <div className="actions-view">
-        <div className="loading-state">
-          <div className="spinner-large"></div>
-          <p>Loading actions...</p>
+      return (
+        <div className="flex h-[60vh] items-center justify-center">
+            <div className="spinner-large text-accent-primary"></div>
         </div>
-      </div>
-    )
+      )
   }
 
   return (
-    <div className="actions-view fade-in">
-      <div className="actions-header">
-        <h1 className="page-title">Proposed Actions</h1>
-        <div className="filters">
+    <div className="space-y-8 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <h1 className="text-3xl font-bold text-text-primary">Proposed Actions</h1>
+        
+        <div className="flex bg-surface p-1 rounded-xl border border-border-light shadow-sm">
           <button
-            className={`filter-btn ${filter === 'pending' ? 'active' : ''}`}
             onClick={() => setFilter('pending')}
+            className={clsx(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              filter === 'pending' 
+                ? "bg-bg-secondary text-text-primary shadow-sm" 
+                : "text-text-secondary hover:text-text-primary"
+            )}
           >
             Pending ({actions.filter(a => a.status === 'pending').length})
           </button>
           <button
-            className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
             onClick={() => setFilter('all')}
+            className={clsx(
+              "px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              filter === 'all' 
+                ? "bg-bg-secondary text-text-primary shadow-sm" 
+                : "text-text-secondary hover:text-text-primary"
+            )}
           >
             All ({actions.length})
           </button>
         </div>
       </div>
 
-      <div className="actions-grid">
-        {filteredActions.map((action, index) => (
-          <div
+      <motion.div 
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid gap-6 md:grid-cols-2 lg:grid-cols-2"
+      >
+        {filteredActions.map((action) => (
+          <motion.div
             key={action.id}
-            className={`action-card ${action.status}`}
-            style={{ animationDelay: `${index * 80}ms` }}
-          >
-            <div className="action-header">
-              <div className="action-type" style={{ background: getTypeColor(action.type) }}>
-                <span className="type-icon">{getTypeIcon(action.type).charAt(0)}</span>
-              </div>
-              <div className="confidence-badge">
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                <span>{Math.round(action.confidence * 100)}%</span>
-              </div>
-            </div>
-
-            <h3 className="action-title">{action.title}</h3>
-            <p className="action-description">{action.description}</p>
-
-            {action.preview && (
-              <div className="action-preview">
-                {action.preview.to && (
-                  <div className="preview-row">
-                    <span className="preview-label">To:</span>
-                    <span className="preview-value">{action.preview.to}</span>
-                  </div>
-                )}
-                {action.preview.subject && (
-                  <div className="preview-row">
-                    <span className="preview-label">Subject:</span>
-                    <span className="preview-value">{action.preview.subject}</span>
-                  </div>
-                )}
-                {action.preview.body && (
-                  <div className="preview-body">{action.preview.body}</div>
-                )}
-                {action.preview.time && (
-                  <div className="preview-row">
-                    <span className="preview-label">Time:</span>
-                    <span className="preview-value">{action.preview.time}</span>
-                  </div>
-                )}
-                {action.preview.location && (
-                  <div className="preview-row">
-                    <span className="preview-label">Location:</span>
-                    <span className="preview-value">{action.preview.location}</span>
-                  </div>
-                )}
-              </div>
+            variants={item}
+            className={clsx(
+              "group relative flex flex-col rounded-2xl border bg-surface p-6 transition-all",
+              action.status === 'pending' 
+                ? "border-border-light shadow-sm hover:shadow-md hover:border-accent-primary/30" 
+                : "border-border-light opacity-70 bg-bg-secondary/30"
             )}
-
-            <div className="action-footer">
-              <span className="proposed-by">by {action.proposed_by}</span>
-              {action.status === 'pending' ? (
-                <div className="action-buttons">
-                  <button
-                    className="reject-button"
-                    onClick={() => handleReject(action.id)}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Reject
-                  </button>
-                  <button
-                    className="approve-button"
-                    onClick={() => handleApprove(action.id)}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Approve
-                  </button>
+          >
+             <div className="mb-4 flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                    <div className={clsx(
+                        "flex h-10 w-10 items-center justify-center rounded-full bg-bg-secondary",
+                        action.type === 'email_reply' && "bg-accent-primary/10",
+                        action.type === 'calendar_event' && "bg-accent-secondary/10",
+                        action.type === 'task_create' && "bg-accent-success/10",
+                        action.type === 'reminder' && "bg-accent-warning/10"
+                    )}>
+                        {getTypeIcon(action.type)}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+                                {action.type.replace('_', ' ')}
+                            </span>
+                            <span className="rounded-full bg-accent-success/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-success">
+                                {Math.round(action.confidence * 100)}% match
+                            </span>
+                        </div>
+                        <div className="text-xs text-text-tertiary mt-0.5">
+                            Proposed by <span className="font-medium text-text-secondary">{action.proposed_by}</span>
+                        </div>
+                    </div>
                 </div>
-              ) : (
-                <span className={`status-badge ${action.status}`}>
-                  {action.status}
-                </span>
-              )}
-            </div>
-          </div>
+             </div>
+
+             <h3 className="text-lg font-bold text-text-primary mb-2">{action.title}</h3>
+             <p className="text-text-secondary text-sm mb-6">{action.description}</p>
+
+             {action.preview && (
+                 <div className="mb-6 rounded-xl bg-bg-secondary/50 p-4 text-sm border border-border-light space-y-2">
+                    {action.preview.to && (
+                        <div className="flex gap-2">
+                            <User size={14} className="text-text-tertiary mt-1" />
+                            <div><span className="text-text-tertiary">To:</span> <span className="text-text-primary">{action.preview.to}</span></div>
+                        </div>
+                    )}
+                    {action.preview.subject && (
+                        <div className="flex gap-2">
+                            <MessageSquare size={14} className="text-text-tertiary mt-1" />
+                            <div><span className="text-text-tertiary">Subject:</span> <span className="text-text-primary">{action.preview.subject}</span></div>
+                        </div>
+                    )}
+                    {action.preview.time && (
+                        <div className="flex gap-2">
+                            <Clock size={14} className="text-text-tertiary mt-1" />
+                            <div><span className="text-text-tertiary">Time:</span> <span className="text-text-primary">{action.preview.time}</span></div>
+                        </div>
+                    )}
+                    {action.preview.location && (
+                        <div className="flex gap-2">
+                            <MapPin size={14} className="text-text-tertiary mt-1" />
+                            <div><span className="text-text-tertiary">Location:</span> <span className="text-text-primary">{action.preview.location}</span></div>
+                        </div>
+                    )}
+                    {action.preview.body && (
+                        <div className="mt-2 pl-2 border-l-2 border-border-medium text-text-secondary italic text-xs line-clamp-3">
+                            "{action.preview.body}"
+                        </div>
+                    )}
+                 </div>
+             )}
+
+             <div className="mt-auto pt-4 border-t border-border-light flex items-center justify-end gap-3">
+                {action.status === 'pending' ? (
+                    <>
+                        <button
+                            onClick={() => handleReject(action.id)}
+                            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-secondary hover:text-accent-error transition-colors"
+                        >
+                            <XCircle size={16} />
+                            Reject
+                        </button>
+                        <button
+                            onClick={() => handleApprove(action.id)}
+                            className="flex items-center gap-2 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:bg-accent-primary-hover shadow-sm hover:shadow transition-all"
+                        >
+                            <CheckCircle2 size={16} />
+                            Approve
+                        </button>
+                    </>
+                ) : (
+                    <div className={clsx(
+                        "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium",
+                        action.status === 'approved' ? "bg-accent-success/10 text-accent-success" : "bg-accent-error/10 text-accent-error"
+                    )}>
+                        {action.status === 'approved' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                        <span className="capitalize">{action.status}</span>
+                    </div>
+                )}
+             </div>
+          </motion.div>
         ))}
 
         {filteredActions.length === 0 && (
-          <div className="empty-state scale-in">
-            <div className="empty-icon">
-              <svg width="80" height="80" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            </div>
-            <h3>No pending actions</h3>
-            <p>AI agents will propose actions here for your approval</p>
+          <div className="col-span-full flex flex-col items-center justify-center py-20 rounded-3xl border border-dashed border-border-dark/30 bg-surface/50">
+             <div className="mb-4 rounded-full bg-bg-secondary p-4">
+                <CheckCircle2 size={32} className="text-text-muted" />
+             </div>
+             <h3 className="text-lg font-semibold text-text-primary">No {filter === 'pending' ? 'pending' : ''} actions</h3>
+             <p className="text-text-secondary">AI agents will propose actions here for your review</p>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   )
 }
-
-export default ActionsView

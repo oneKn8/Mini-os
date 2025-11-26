@@ -21,6 +21,9 @@ class AgentContext(BaseModel):
     user_preferences: Dict = {}
     weather_context: Dict = {}
     metadata: Dict = {}
+    # Added model override support
+    model_provider: Optional[str] = None
+    model_name: Optional[str] = None
 
     class Config:
         arbitrary_types_allowed = True
@@ -28,7 +31,7 @@ class AgentContext(BaseModel):
     @classmethod
     def from_state(cls, state: OpsAgentState) -> "AgentContext":
         """Create AgentContext from OpsAgentState."""
-        return cls(
+        ctx = cls(
             user_id=state.user_id,
             intent=state.intent,
             items=state.items,
@@ -37,6 +40,12 @@ class AgentContext(BaseModel):
             weather_context=state.weather_context,
             metadata=state.metadata,
         )
+        # Extract model preference from metadata if present
+        if state.metadata and "model_provider" in state.metadata:
+            ctx.model_provider = state.metadata.get("model_provider")
+        if state.metadata and "model_name" in state.metadata:
+            ctx.model_name = state.metadata.get("model_name")
+        return ctx
 
 
 class AgentResult(BaseModel):
@@ -81,13 +90,14 @@ class BaseAgent(ABC):
 
     def _update_state_from_result(self, state: OpsAgentState, result: AgentResult) -> OpsAgentState:
         """Update LangGraph state with agent result."""
-        # Add agent log
+        # Add agent log with output_summary for result reconstruction
         state.agent_logs.append(
             {
                 "agent": self.name,
                 "status": result.status,
                 "duration_ms": result.duration_ms,
                 "error": result.error_message,
+                "output_summary": result.output_summary,
             }
         )
 

@@ -14,22 +14,31 @@ fi
 
 # Load .env
 set -a
-source .env
+if [ -f .env ]; then
+    source .env
+fi
 set +a
 
-DB_PORT=${LOCAL_DB_PORT:-5543}
+# Use LOCAL_DB_PORT from .env if set, otherwise default to 5433 (your active port)
+DB_PORT=${LOCAL_DB_PORT:-5433}
 API_PORT=${LOCAL_API_PORT:-8101}
 FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
 
 echo "[1/4] Checking PostgreSQL..."
-if ! sudo systemctl is-active --quiet postgresql; then
-    echo "Starting PostgreSQL service..."
-    sudo systemctl start postgresql
+# Skip systemctl check if we are using a custom port (likely Docker or custom install)
+if [ "$DB_PORT" != "5432" ]; then
+    echo "Using custom DB port: $DB_PORT"
+else
+    if ! sudo systemctl is-active --quiet postgresql; then
+        echo "Starting PostgreSQL service..."
+        sudo systemctl start postgresql
+    fi
 fi
-echo "[OK] PostgreSQL is running"
+echo "[OK] PostgreSQL check complete"
 
 echo ""
 echo "[2/4] Running database migrations..."
+# Ensure DATABASE_URL matches the port we found
 export DATABASE_URL="postgresql://ops_user:ops_password@localhost:${DB_PORT}/ops_center"
 alembic upgrade head
 

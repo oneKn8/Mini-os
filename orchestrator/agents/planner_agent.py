@@ -30,9 +30,15 @@ class PlannerAgent(BaseAgent):
 
             duration_ms = int((time.time() - start_time) * 1000)
 
+            # Return plan data directly (not nested) for chat compatibility
             return self._create_result(
                 status="success",
-                output_summary={"plan_summary": plan_summary, "time_blocks_proposed": len(action_proposals)},
+                output_summary={
+                    "must_do_today": plan_summary.get("must_do_today", []),
+                    "focus_areas": plan_summary.get("focus_areas", []),
+                    "time_recommendations": plan_summary.get("time_recommendations", []),
+                    "time_blocks_proposed": len(action_proposals),
+                },
                 action_proposals=action_proposals,
                 duration_ms=duration_ms,
             )
@@ -43,10 +49,13 @@ class PlannerAgent(BaseAgent):
 
     async def _generate_plan(self, context: AgentContext) -> Dict:
         """Generate daily plan summary."""
+        # Pass context to LLMClient if it needs to know provider/model preference
+        self.llm = LLMClient(provider=context.model_provider, model=context.model_name)
+
         critical_items = [i for i in context.items if i.get("importance") in ["critical", "high"]]
         events = [i for i in context.items if i.get("source_type") == "event"]
 
-        prompt = f"""Generate a focused daily plan.
+        prompt = f"""Generate a focused daily plan based on these items.
 
 Critical/High Priority Items ({len(critical_items)}):
 {json.dumps([{'title': i.get('title'), 'due': i.get('due_datetime')} for i in critical_items[:10]], indent=2)}
@@ -56,24 +65,35 @@ Today's Events ({len(events)}):
 
 Weather: {context.weather_context.get('condition', 'Clear')} {context.weather_context.get('temperature', 20)}°C
 
-User Preferences:
-- Quiet hours: {context.user_preferences.get('quiet_hours_start', 'none')} - \
-{context.user_preferences.get('quiet_hours_end', 'none')}
-- Work blocks: {context.user_preferences.get('preferred_work_blocks', [])}
-
-Respond with JSON:
+Respond with ONLY valid JSON (no markdown, no explanation):
 {{
   "must_do_today": ["item 1", "item 2", "item 3"],
   "focus_areas": ["area 1", "area 2"],
   "time_recommendations": [
-    {{"task": "task", "suggested_time": "HH:MM", "duration_minutes": 60}}
+    {{"task": "task name", "suggested_time": "09:00", "duration_minutes": 60}}
   ]
 }}
 
 Keep it realistic - max 3-5 must-do items."""
 
         response = await self._call_llm(prompt)
-        return json.loads(response)
+
+        # Try to extract JSON from response
+        try:
+            return json.loads(response)
+        except json.JSONDecodeError:
+            # Try to find JSON in the response
+            import re
+
+            json_match = re.search(r"\{[\s\S]*\}", response)
+            if json_match:
+                return json.loads(json_match.group())
+            # Return a default plan if parsing fails
+            return {
+                "must_do_today": [item.get("title", "Task") for item in critical_items[:3]],
+                "focus_areas": ["High priority tasks"],
+                "time_recommendations": [],
+            }
 
     async def _propose_time_blocks(self, context: AgentContext, plan: Dict) -> List[Dict]:
         """Propose calendar time blocks based on plan."""

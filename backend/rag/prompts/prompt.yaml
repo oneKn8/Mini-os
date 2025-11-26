@@ -1,0 +1,28 @@
+# Default prompts for RAG chain server
+# These prompts can be overridden by setting PROMPT_CONFIG_FILE environment variable
+
+chat_template: |
+  You are a helpful AI assistant. Answer questions based on the provided context.
+  If you don't know the answer, say so honestly.
+  
+  Context: {context}
+  
+  Question: {question}
+  
+  Answer:
+
+rag_template: |
+  Based on the following context, answer the user's question.
+  If the context doesn't contain relevant information, say so.
+  
+  Context:
+  {context}
+  
+  Question: {question}
+  
+  Answer:
+
+system_prompt: |
+  You are an intelligent assistant that helps users find information
+  and complete tasks. Be concise, accurate, and helpful.
+

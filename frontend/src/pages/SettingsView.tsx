@@ -1,111 +1,107 @@
-import './SettingsView.css'
+import { Mail, Calendar, Moon, Globe, Cpu, RefreshCw } from 'lucide-react'
 
 function SettingsView() {
   return (
-    <div className="settings-view fade-in">
-      <div className="settings-header">
-        <h1 className="page-title gradient-text">Settings</h1>
-      </div>
+    <div className="space-y-8 pb-20 fade-in">
+      <h1 className="text-3xl font-bold text-text-primary">Settings</h1>
 
-      <div className="settings-grid">
-        <div className="settings-section glass">
-          <div className="section-header">
-            <h2>Link Connected Accounts</h2>
+      <div className="grid gap-8 md:grid-cols-2">
+        {/* Connected Accounts */}
+        <div className="space-y-6 rounded-2xl bg-surface p-6 border border-border-light shadow-sm">
+          <h2 className="text-lg font-semibold text-text-primary border-b border-border-light pb-4">Connected Accounts</h2>
+          
+          <div className="space-y-4">
+            {[
+                { name: "Gmail", icon: Mail, connected: false },
+                { name: "Outlook", icon: Mail, connected: false },
+                { name: "Google Calendar", icon: Calendar, connected: false }
+            ].map((account) => (
+                <div key={account.name} className="flex items-center justify-between p-3 rounded-xl bg-bg-secondary/50 border border-border-light">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-surface text-text-secondary shadow-sm">
+                            <account.icon size={20} />
+                        </div>
+                        <div>
+                            <div className="font-medium text-text-primary">{account.name}</div>
+                            <div className="text-xs text-text-tertiary">
+                                {account.connected ? "Connected" : "Not connected"}
+                            </div>
+                        </div>
+                    </div>
+                    <button className="px-4 py-1.5 rounded-lg text-sm font-medium bg-surface border border-border-medium text-text-primary hover:bg-bg-secondary transition-colors">
+                        {account.connected ? "Manage" : "Connect"}
+                    </button>
+                </div>
+            ))}
           </div>
-          <div className="section-content">
-            <div className="account-item">
-              <div className="account-info">
-                <div className="account-icon gmail">Email</div>
-                <div>
-                  <div className="account-name">Gmail</div>
-                  <div className="account-status">Not connected</div>
+        </div>
+
+        {/* Preferences */}
+        <div className="space-y-6 rounded-2xl bg-surface p-6 border border-border-light shadow-sm">
+          <h2 className="text-lg font-semibold text-text-primary border-b border-border-light pb-4">Preferences</h2>
+          
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-accent-primary/10 text-accent-primary">
+                        <Moon size={20} />
+                    </div>
+                    <div>
+                        <div className="font-medium text-text-primary">Quiet Hours</div>
+                        <div className="text-xs text-text-secondary">Pause notifications 10 PM - 8 AM</div>
+                    </div>
                 </div>
-              </div>
-              <button className="connect-button">Connect</button>
+                <div className="h-6 w-11 rounded-full bg-accent-primary/20 p-1 cursor-pointer">
+                    <div className="h-4 w-4 rounded-full bg-accent-primary translate-x-5"></div>
+                </div>
             </div>
-            <div className="account-item">
-              <div className="account-info">
-                <div className="account-icon outlook">Mail</div>
-                <div>
-                  <div className="account-name">Outlook</div>
-                  <div className="account-status">Not connected</div>
+
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-accent-secondary/10 text-accent-secondary">
+                        <Globe size={20} />
+                    </div>
+                    <div>
+                        <div className="font-medium text-text-primary">Timezone</div>
+                        <div className="text-xs text-text-secondary">UTC-8 (Pacific Time)</div>
+                    </div>
                 </div>
-              </div>
-              <button className="connect-button">Connect</button>
-            </div>
-            <div className="account-item">
-              <div className="account-info">
-                <div className="account-icon calendar">Calendar</div>
-                <div>
-                  <div className="account-name">Google Calendar</div>
-                  <div className="account-status">Not connected</div>
-                </div>
-              </div>
-              <button className="connect-button">Connect</button>
+                <button className="text-sm text-accent-primary font-medium">Edit</button>
             </div>
           </div>
         </div>
 
-        <div className="settings-section glass">
-          <div className="section-header">
-            <h2>Settings Preferences</h2>
-          </div>
-          <div className="section-content">
-            <div className="preference-item">
-              <div className="preference-label">
-                <span>Email Tone</span>
-                <span className="preference-description">How formal should AI drafts be?</span>
-              </div>
-              <select className="preference-select">
-                <option>Professional</option>
-                <option>Friendly</option>
-                <option>Casual</option>
-              </select>
-            </div>
-            <div className="preference-item">
-              <div className="preference-label">
-                <span>Quiet Hours</span>
-                <span className="preference-description">When should notifications pause?</span>
-              </div>
-              <div className="preference-value">10 PM - 8 AM</div>
-            </div>
-            <div className="preference-item">
-              <div className="preference-label">
-                <span>Timezone</span>
-                <span className="preference-description">Your local timezone</span>
-              </div>
-              <div className="preference-value">UTC-8 (Pacific)</div>
-            </div>
-          </div>
-        </div>
+        {/* AI Configuration */}
+        <div className="md:col-span-2 space-y-6 rounded-2xl bg-surface p-6 border border-border-light shadow-sm">
+          <h2 className="text-lg font-semibold text-text-primary border-b border-border-light pb-4">AI Configuration</h2>
+          
+          <div className="grid gap-6 md:grid-cols-2">
+             <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
+                    <Cpu size={16} />
+                    AI Provider
+                </label>
+                <select className="w-full rounded-xl border border-border-medium bg-bg-secondary px-4 py-2.5 text-sm text-text-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary outline-none">
+                    <option>OpenAI (GPT-4o-mini)</option>
+                    <option>NVIDIA NIM (Llama 3 70B)</option>
+                    <option>Anthropic (Claude 3 Haiku)</option>
+                </select>
+                <p className="mt-1.5 text-xs text-text-tertiary">Select the LLM that powers your agents.</p>
+             </div>
 
-        <div className="settings-section glass">
-          <div className="section-header">
-            <h2>AI AI Configuration</h2>
-          </div>
-          <div className="section-content">
-            <div className="preference-item">
-              <div className="preference-label">
-                <span>AI Provider</span>
-                <span className="preference-description">Choose your LLM provider</span>
-              </div>
-              <select className="preference-select">
-                <option>OpenAI (GPT-4o-mini)</option>
-                <option>NVIDIA NIM (Llama 3 70B)</option>
-              </select>
-            </div>
-            <div className="preference-item">
-              <div className="preference-label">
-                <span>Auto-sync Interval</span>
-                <span className="preference-description">How often to check for new items</span>
-              </div>
-              <select className="preference-select">
-                <option>Every 15 minutes</option>
-                <option>Every 30 minutes</option>
-                <option>Every hour</option>
-                <option>Manual only</option>
-              </select>
-            </div>
+             <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
+                    <RefreshCw size={16} />
+                    Auto-sync Interval
+                </label>
+                <select className="w-full rounded-xl border border-border-medium bg-bg-secondary px-4 py-2.5 text-sm text-text-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary outline-none">
+                    <option>Manual only</option>
+                    <option>Every 15 minutes</option>
+                    <option>Every 30 minutes</option>
+                    <option>Every hour</option>
+                </select>
+                <p className="mt-1.5 text-xs text-text-tertiary">Frequency of background inbox checks.</p>
+             </div>
           </div>
         </div>
       </div>

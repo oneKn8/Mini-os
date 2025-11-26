@@ -12,12 +12,13 @@ from langchain_openai import ChatOpenAI
 class LLMClient:
     """Unified LLM client using LangChain, supporting multiple providers."""
 
-    def __init__(self, provider: Optional[str] = None):
+    def __init__(self, provider: Optional[str] = None, model: Optional[str] = None):
         """
         Initialize LLM client with LangChain.
 
         Args:
             provider: 'nvidia' or 'openai'. Defaults to env var AI_PROVIDER or 'openai'
+            model: specific model name to override default
         """
         self.provider = provider or os.getenv("AI_PROVIDER", "openai")
 
@@ -26,16 +27,17 @@ class LLMClient:
             if not api_key:
                 raise ValueError("NVIDIA_API_KEY not found")
             self.llm = ChatNVIDIA(
-                model="meta/llama3-70b-instruct",
+                model=model or "meta/llama3-70b-instruct",
                 nvidia_api_key=api_key,
             )
         elif self.provider == "openai":
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY not found")
-            model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+            # Allow override, else env var, else default
+            model_name = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
             self.llm = ChatOpenAI(
-                model=model,
+                model=model_name,
                 openai_api_key=api_key,
                 temperature=0.3,
             )

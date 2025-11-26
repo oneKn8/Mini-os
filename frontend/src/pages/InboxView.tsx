@@ -1,5 +1,19 @@
 import { useEffect, useState } from 'react'
-import './InboxView.css'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+    Inbox as InboxIcon, 
+    Check, 
+    Trash2, 
+    MoreHorizontal, 
+    Mail, 
+    Briefcase, 
+    User, 
+    DollarSign,
+    Filter,
+    RefreshCw,
+    Search
+} from 'lucide-react'
+import { clsx } from 'clsx'
 
 interface InboxItem {
   id: string
@@ -13,7 +27,7 @@ interface InboxItem {
   labels: string[]
 }
 
-function InboxView() {
+export default function InboxView() {
   const [items, setItems] = useState<InboxItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
@@ -24,6 +38,7 @@ function InboxView() {
   }, [])
 
   const fetchInbox = async () => {
+    setLoading(true)
     try {
       const response = await fetch('/api/inbox')
       if (response.ok) {
@@ -37,31 +52,21 @@ function InboxView() {
     }
   }
 
-  const getImportanceColor = (importance: string) => {
-    switch (importance) {
-      case 'high':
-        return 'var(--gradient-warning)'
-      case 'medium':
-        return 'var(--gradient-primary)'
-      case 'low':
-        return 'var(--gradient-success)'
-      default:
-        return 'var(--gradient-primary)'
-    }
-  }
-
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case "work":
-        return 'Work'
-      case "personal":
-        return 'Personal'
-      case "finance":
-        return 'Finance'
-      case "social":
-        return 'Social'
-      default:
-        return 'Email'
+      case "work": return <Briefcase size={16} className="text-accent-secondary" />
+      case "personal": return <User size={16} className="text-accent-success" />
+      case "finance": return <DollarSign size={16} className="text-accent-warning" />
+      default: return <Mail size={16} className="text-text-tertiary" />
+    }
+  }
+  
+  const getImportanceColor = (importance: string) => {
+    switch (importance) {
+      case 'high': return 'bg-accent-error'
+      case 'medium': return 'bg-accent-warning'
+      case 'low': return 'bg-accent-success'
+      default: return 'bg-text-tertiary'
     }
   }
 
@@ -71,128 +76,207 @@ function InboxView() {
     return item.category === filter
   })
 
-  if (loading) {
-    return (
-      <div className="inbox-view">
-        <div className="loading-state">
-          <div className="spinner-large"></div>
-          <p>Loading inbox...</p>
-        </div>
-      </div>
-    )
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05
+      }
+    }
+  }
+  
+  const item = {
+    hidden: { opacity: 0, x: -10 },
+    show: { opacity: 1, x: 0 }
   }
 
   return (
-    <div className="inbox-view fade-in">
-      <div className="inbox-header">
-        <div className="header-top">
-          <h1 className="page-title">Inbox</h1>
-          <button className="sync-button">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <span>Sync</span>
-          </button>
-        </div>
+    <div className="h-full flex flex-col md:flex-row gap-6 pb-20">
+       {/* List Column */}
+       <div className={clsx(
+           "flex-1 flex flex-col min-w-0 h-full",
+           selectedItem ? "hidden md:flex" : "flex"
+       )}>
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-3xl font-bold text-text-primary">Inbox</h1>
+                <button 
+                    onClick={fetchInbox}
+                    className="p-2 rounded-lg hover:bg-surface text-text-secondary hover:text-accent-primary transition-colors"
+                >
+                    <RefreshCw size={20} className={clsx(loading && "animate-spin")} />
+                </button>
+            </div>
 
-        <div className="filters">
-          {['all', 'unread', "work", "personal", "finance"].map((f) => (
-            <button
-              key={f}
-              className={`filter-btn ${filter === f ? 'active' : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="inbox-content">
-        <div className="inbox-list">
-          {filteredItems.map((item, index) => (
-            <div
-              key={item.id}
-              className={`inbox-item ${item.read ? 'read' : 'unread'} ${
-                selectedItem?.id === item.id ? 'selected' : ''
-              }`}
-              style={{ animationDelay: `${index * 50}ms` }}
-              onClick={() => setSelectedItem(item)}
-            >
-              <div
-                className="item-indicator"
-                style={{ background: getImportanceColor(item.importance) }}
-              ></div>
-
-              <div className="item-content">
-                <div className="item-header">
-                  <div className="item-meta">
-                    <span className="category-icon">{getCategoryIcon(item.category)}</span>
-                    <span className="sender">{item.sender}</span>
-                    {!item.read && <span className="unread-dot"></span>}
-                  </div>
-                  <span className="timestamp">{item.timestamp}</span>
+            {/* Search & Filters */}
+            <div className="space-y-4 mb-6">
+                <div className="relative">
+                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                    <input 
+                        type="text" 
+                        placeholder="Search messages..."
+                        className="w-full rounded-xl border border-border-light bg-surface pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/20 focus:border-accent-primary transition-all"
+                    />
                 </div>
 
-                <h3 className="item-subject">{item.subject}</h3>
-                <p className="item-preview">{item.preview}</p>
-
-                {item.labels.length > 0 && (
-                  <div className="item-labels">
-                    {item.labels.map((label, i) => (
-                      <span key={i} className="label">
-                        {label}
-                      </span>
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {['all', 'unread', "work", "personal", "finance"].map((f) => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            className={clsx(
+                                "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
+                                filter === f 
+                                    ? "bg-accent-primary text-white shadow-md" 
+                                    : "bg-surface text-text-secondary hover:bg-bg-secondary border border-border-light"
+                            )}
+                        >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
                     ))}
-                  </div>
+                </div>
+            </div>
+
+            {/* Message List */}
+            <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-2">
+                {loading && filteredItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <div className="spinner-large text-accent-primary"></div>
+                    </div>
+                ) : (
+                    <motion.div 
+                        variants={container}
+                        initial="hidden"
+                        animate="show"
+                        className="space-y-2"
+                    >
+                        {filteredItems.map((message) => (
+                            <motion.div
+                                key={message.id}
+                                variants={item}
+                                layoutId={`message-${message.id}`}
+                                onClick={() => setSelectedItem(message)}
+                                className={clsx(
+                                    "group cursor-pointer rounded-xl p-4 border transition-all",
+                                    selectedItem?.id === message.id 
+                                        ? "bg-accent-primary/5 border-accent-primary" 
+                                        : "bg-surface border-border-light hover:border-accent-primary/30 hover:shadow-sm",
+                                    !message.read && "border-l-4 border-l-accent-primary"
+                                )}
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className={clsx("w-2 h-2 rounded-full", getImportanceColor(message.importance))}></div>
+                                        <span className={clsx(
+                                            "text-sm font-semibold",
+                                            !message.read ? "text-text-primary" : "text-text-secondary"
+                                        )}>{message.sender}</span>
+                                    </div>
+                                    <span className="text-xs text-text-tertiary">{message.timestamp}</span>
+                                </div>
+                                
+                                <h3 className={clsx(
+                                    "text-sm mb-1",
+                                    !message.read ? "font-bold text-text-primary" : "font-medium text-text-secondary"
+                                )}>{message.subject}</h3>
+                                
+                                <p className="text-xs text-text-tertiary line-clamp-2">{message.preview}</p>
+                                
+                                <div className="flex items-center gap-2 mt-3">
+                                    <div className="flex items-center gap-1 text-xs text-text-tertiary px-2 py-1 rounded-md bg-bg-secondary">
+                                        {getCategoryIcon(message.category)}
+                                        <span className="capitalize">{message.category}</span>
+                                    </div>
+                                    {message.labels.map(label => (
+                                        <span key={label} className="text-[10px] px-2 py-1 rounded-md bg-bg-secondary text-text-tertiary border border-border-light">
+                                            {label}
+                                        </span>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </motion.div>
                 )}
-              </div>
+                
+                {!loading && filteredItems.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="w-16 h-16 rounded-full bg-bg-secondary flex items-center justify-center mb-4">
+                            <InboxIcon size={32} className="text-text-muted" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-text-primary">Inbox Zero</h3>
+                        <p className="text-text-secondary">You're all caught up!</p>
+                    </div>
+                )}
             </div>
-          ))}
+       </div>
 
-          {filteredItems.length === 0 && (
-            <div className="empty-state scale-in">
-              <div className="empty-icon">Empty</div>
-              <h3>No messages</h3>
-              <p>Your inbox is empty</p>
-            </div>
-          )}
-        </div>
+       {/* Detail View */}
+       <AnimatePresence mode="wait">
+           {selectedItem ? (
+               <motion.div 
+                   initial={{ opacity: 0, x: 20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   exit={{ opacity: 0, x: 20 }}
+                   className="flex-1 bg-surface rounded-2xl border border-border-light shadow-sm flex flex-col h-full overflow-hidden"
+               >
+                   {/* Toolbar */}
+                   <div className="flex items-center justify-between px-6 py-4 border-b border-border-light">
+                       <div className="flex items-center gap-2">
+                           <button className="p-2 hover:bg-bg-secondary rounded-lg text-text-secondary" title="Archive">
+                               <Check size={18} />
+                           </button>
+                           <button className="p-2 hover:bg-bg-secondary rounded-lg text-text-secondary" title="Delete">
+                               <Trash2 size={18} />
+                           </button>
+                           <button className="p-2 hover:bg-bg-secondary rounded-lg text-text-secondary">
+                               <MoreHorizontal size={18} />
+                           </button>
+                       </div>
+                       <button 
+                           onClick={() => setSelectedItem(null)}
+                           className="md:hidden text-sm font-medium text-accent-primary"
+                       >
+                           Back to list
+                       </button>
+                   </div>
 
-        {selectedItem && (
-          <div className="inbox-detail glass-strong">
-            <div className="detail-header">
-              <button
-                className="close-button"
-                onClick={() => setSelectedItem(null)}
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                  <path
-                    fillRule="evenodd"
-                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-              <h2>{selectedItem.subject}</h2>
-            </div>
-            <div className="detail-meta">
-              <span className="detail-sender">{selectedItem.sender}</span>
-              <span className="detail-timestamp">{selectedItem.timestamp}</span>
-            </div>
-            <div className="detail-body">
-              <p>{selectedItem.preview}</p>
-              {/* Full email content would go here */}
-            </div>
-          </div>
-        )}
-      </div>
+                   {/* Content */}
+                   <div className="flex-1 overflow-y-auto p-8">
+                       <h2 className="text-2xl font-bold text-text-primary mb-4">{selectedItem.subject}</h2>
+                       
+                       <div className="flex items-start justify-between mb-8 pb-8 border-b border-border-light">
+                           <div className="flex items-center gap-4">
+                               <div className="w-10 h-10 rounded-full bg-accent-primary/10 flex items-center justify-center text-accent-primary font-bold text-lg">
+                                   {selectedItem.sender[0]}
+                               </div>
+                               <div>
+                                   <div className="font-semibold text-text-primary">{selectedItem.sender}</div>
+                                   <div className="text-xs text-text-tertiary">To: Me</div>
+                               </div>
+                           </div>
+                           <div className="text-sm text-text-tertiary">{selectedItem.timestamp}</div>
+                       </div>
+
+                       <div className="prose prose-sm max-w-none text-text-secondary leading-relaxed">
+                           <p>{selectedItem.preview}</p>
+                           <p className="mt-4">
+                               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                           </p>
+                           <p className="mt-4">
+                               Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                           </p>
+                       </div>
+                   </div>
+               </motion.div>
+           ) : (
+               <div className="hidden md:flex flex-1 items-center justify-center bg-bg-secondary/50 rounded-2xl border border-dashed border-border-dark/20">
+                   <div className="text-center text-text-muted">
+                       <Mail size={48} className="mx-auto mb-4 opacity-20" />
+                       <p>Select a message to read</p>
+                   </div>
+               </div>
+           )}
+       </AnimatePresence>
     </div>
   )
 }
-
-export default InboxView

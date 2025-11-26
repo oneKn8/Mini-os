@@ -18,7 +18,7 @@ class OpsAgentState(BaseModel):
     agent_logs: List[Dict[str, Any]] = Field(default_factory=list)
     user_preferences: Dict[str, Any] = Field(default_factory=dict)
     weather_context: Dict[str, Any] = Field(default_factory=dict)
-    errors: List[Dict[str, Any]] = Field(default_factory=dict)
+    errors: List[Dict[str, Any]] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
     class Config:

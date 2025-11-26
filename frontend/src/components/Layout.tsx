@@ -1,127 +1,182 @@
-import { Outlet, NavLink } from 'react-router-dom'
-import { useState } from 'react'
-import './Layout.css'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import { 
+    Calendar, 
+    Inbox, 
+    Trello, 
+    Zap, 
+    Settings, 
+    Menu, 
+    X,
+    Activity,
+    GripVertical
+} from 'lucide-react'
+import { clsx } from 'clsx'
+import ChatWindow from './Chat/ChatWindow'
+
+const navItems = [
+  { path: '/today', label: 'Today', icon: Calendar },
+  { path: '/inbox', label: 'Inbox', icon: Inbox },
+  { path: '/planner', label: 'Planner', icon: Trello },
+  { path: '/actions', label: 'Actions', icon: Zap },
+  { path: '/settings', label: 'Settings', icon: Settings },
+]
 
 function Layout() {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const location = useLocation()
 
   return (
-    <div className="layout">
-      <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path
-            d="M3 7h14M3 13h14"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
-      </button>
-
-      <nav className={`sidebar ${menuOpen ? 'open' : ''}`}>
-        <div className="logo">
-          <div className="logo-icon">
-            <svg width="24" height="24" viewBox="0 0 20 20" fill="white">
-              <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="logo-text">Ops Center</div>
+    <div className="flex h-screen w-full bg-bg-secondary text-text-primary overflow-hidden font-sans">
+      {/* Desktop Left Navigation Sidebar */}
+      <aside className="hidden w-64 flex-col border-r border-border-light bg-surface px-4 py-6 md:flex shadow-sm z-20 shrink-0">
+        <div className="flex items-center gap-3 px-2 mb-8">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-primary text-white shadow-md">
+                <Activity size={20} />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-text-primary">Ops Center</span>
         </div>
 
-        <div className="nav-links">
-          <NavLink
-            to="/today"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-            </svg>
-            Today
-          </NavLink>
+        <nav className="flex-1 space-y-1">
+            {navItems.map((item) => {
+                const isActive = location.pathname.startsWith(item.path)
+                return (
+                    <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={({ isActive }) => clsx(
+                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                            isActive 
+                                ? "bg-accent-primary/10 text-accent-primary" 
+                                : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+                        )}
+                    >
+                        <item.icon size={18} className={clsx(isActive ? "text-accent-primary" : "text-text-tertiary group-hover:text-text-primary")} />
+                        {item.label}
+                    </NavLink>
+                )
+            })}
+        </nav>
 
-          <NavLink
-            to="/inbox"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-            </svg>
-            Inbox
-          </NavLink>
-
-          <NavLink
-            to="/planner"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Planner
-          </NavLink>
-
-          <NavLink
-            to="/actions"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Actions
-          </NavLink>
-
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Settings
-          </NavLink>
-
-          <NavLink
-            to="/chat"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            onClick={() => setMenuOpen(false)}
-          >
-            <svg className="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-            </svg>
-            Chat
-          </NavLink>
+        <div className="mt-auto pt-6 border-t border-border-light">
+             <div className="flex items-center gap-3 rounded-lg bg-bg-secondary px-3 py-3 border border-border-light">
+                <div className="h-2 w-2 rounded-full bg-accent-success animate-pulse shadow-[0_0_8px_rgba(18,184,134,0.4)]"></div>
+                <div className="flex flex-col">
+                    <span className="text-xs font-semibold text-text-primary">System Online</span>
+                    <span className="text-[10px] text-text-tertiary">All agents active</span>
+                </div>
+             </div>
         </div>
+      </aside>
 
-        <div className="status-indicator">
-          <div className="status-card">
-            <div className="status-dot"></div>
-            <div className="status-text">AI Agents Active</div>
-          </div>
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between border-b border-border-light bg-surface px-4">
+        <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-primary text-white">
+                <Activity size={20} />
+            </div>
+            <span className="font-bold text-lg">Ops Center</span>
         </div>
-      </nav>
+        <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 text-text-secondary hover:bg-bg-secondary rounded-md"
+        >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+      
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+            <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-20 bg-surface pt-20 px-4 md:hidden"
+            >
+                 <nav className="space-y-2">
+                    {navItems.map((item) => (
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={({ isActive }) => clsx(
+                                "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors",
+                                isActive 
+                                    ? "bg-accent-primary/10 text-accent-primary" 
+                                    : "text-text-secondary hover:bg-bg-secondary"
+                            )}
+                        >
+                            <item.icon size={20} />
+                            {item.label}
+                        </NavLink>
+                    ))}
+                 </nav>
+            </motion.div>
+        )}
+      </AnimatePresence>
 
-      <main className="main-content">
-        <Outlet />
-      </main>
+      {/* Main Content + Chat Resizable Group */}
+      <div className="flex-1 h-full overflow-hidden pt-16 md:pt-0">
+          <PanelGroup direction="horizontal">
+            <Panel defaultSize={70} minSize={30}>
+                <main className="h-full w-full overflow-y-auto overflow-x-hidden md:p-6 px-4 bg-bg-secondary">
+                    <div className="mx-auto max-w-5xl min-h-full">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={location.pathname}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="min-h-full"
+                            >
+                                <Outlet />
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+                </main>
+            </Panel>
+            
+            <PanelResizeHandle className="w-1 bg-border-light hover:bg-accent-primary/50 transition-colors flex items-center justify-center">
+                <div className="h-8 w-1 rounded-full bg-border-medium"></div>
+            </PanelResizeHandle>
+            
+            <Panel defaultSize={30} minSize={20} maxSize={50} className="bg-surface border-l border-border-light shadow-lg z-10">
+                <div className="h-full flex flex-col">
+                    <ChatWindow />
+                </div>
+            </Panel>
+          </PanelGroup>
+      </div>
     </div>
   )
 }
 
+// Navigation Listener Hook
+function useNavigationListener() {
+    const navigate = useNavigate()
+    useEffect(() => {
+        const handleNavigation = (event: CustomEvent<string>) => {
+            if (event.detail) {
+                navigate(event.detail)
+            }
+        }
+        window.addEventListener('chat-navigate', handleNavigation as EventListener)
+        return () => {
+            window.removeEventListener('chat-navigate', handleNavigation as EventListener)
+        }
+    }, [navigate])
+}
+
+// Wrapper component to use the hook
+function LayoutWithNavigation() {
+    useNavigationListener()
+    return <Layout />
+}
+
 export default Layout
+

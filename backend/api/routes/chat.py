@@ -8,7 +8,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
+import json
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -38,6 +40,9 @@ class SendMessageRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=2000)
     session_id: Optional[str] = Field(default=None, alias="sessionId")
     context: Optional[Dict[str, Any]] = None
+    # Added model preference
+    model_provider: Optional[str] = Field(default=None, alias="modelProvider")
+    model_name: Optional[str] = Field(default=None, alias="modelName")
 
     class Config:
         populate_by_name = True
@@ -88,9 +93,17 @@ Respond with JSON:
   "reason": "short explanation"
 }}
 
-Pick intent 'plan_day' for anything asking for plans or agenda. Use 'refresh_inbox' for triage/processing inbox.
-Use 'pending_actions' when the user wants to review items awaiting approval. Use 'help' for capability questions.
-Use 'general' when none apply."""
+Intent guide:
+- 'plan_day': User wants to plan their day or get an agenda
+- 'refresh_inbox': User wants to triage/process/refresh inbox
+- 'pending_actions': User wants to see items awaiting their approval
+- 'help': User asks what you can do or how to use the system (e.g. "what can you do?", "help me")
+- 'general': Any factual question, request for information, or anything else
+  (e.g. "what is X?", "when is Y?", "tell me about Z")
+
+IMPORTANT: Use 'general' for questions asking about facts, policies, dates,
+limits, etc. Only use 'help' when the user specifically asks about the
+assistant's capabilities."""
 
         result = self.client.call_json(prompt, temperature=0.0, max_tokens=256)
 
@@ -247,6 +260,65 @@ class ChatService:
 
         return await self._handle_general(message, intent_match, db, context)
 
+    async def stream_message(self, message: str, db: Session, context: Optional[Dict[str, Any]] = None):
+        intent_match = self.intent_detector.detect(message, context)
+
+        # Yield intent detection info
+        yield {"type": "intent", "intent": intent_match.intent, "confidence": intent_match.confidence}
+
+        if intent_match.intent == "general":
+            response, metadata = await self._handle_general(message, intent_match, db, context)
+            yield {"type": "message", "content": response, "metadata": metadata}
+            return
+
+        if intent_match.intent == "help":
+            response, metadata = await self._handle_help(intent_match, db, context)
+            yield {"type": "message", "content": response, "metadata": metadata}
+            return
+
+        if intent_match.intent == "pending_actions":
+            response, metadata = await self._handle_pending_actions(intent_match, db, context)
+            yield {"type": "message", "content": response, "metadata": metadata}
+            return
+
+        # For agent workflows (plan_day, refresh_inbox)
+        orchestrator = self._get_orchestrator()
+        items = []
+        if intent_match.intent in ["plan_day", "refresh_inbox"]:
+            items = self._load_recent_items(db, limit=50)
+            if not items and intent_match.intent == "plan_day":
+                yield {"type": "error", "error": "I need at least a few inbox items before I can plan your day."}
+                return
+            if not items and intent_match.intent == "refresh_inbox":
+                yield {"type": "error", "error": "I don't have any inbox items to triage yet."}
+                return
+
+        agent_context = orchestrator.build_context(intent=intent_match.intent, items=items, user_id="default_user")
+
+        final_results = {}
+
+        async for event in orchestrator.stream(intent_match.intent, agent_context, db):
+            yield event
+
+            if event["type"] == "thought" and event.get("status") == "success":
+                agent = event["agent"]
+                summary = event.get("summary")
+                if summary:
+                    final_results[agent] = summary
+
+        # Format final response based on intent
+        response_text = "Process completed."
+        if intent_match.intent == "plan_day":
+            planner_summary = final_results.get("planner", {})
+            response_text = self._format_plan_summary(planner_summary)
+        elif intent_match.intent == "refresh_inbox":
+            response_text = "Refresh complete.\n"
+            for agent, summary in final_results.items():
+                summary_str = ", ".join([f"{k}: {v}" for k, v in summary.items()])
+                response_text += f"- {agent}: {summary_str}\n"
+
+        yield {"type": "message", "content": response_text, "metadata": {"intent": intent_match.intent}}
+
     async def _handle_plan_day(
         self, intent: IntentMatch, db: Session, context: Optional[Dict[str, Any]]
     ) -> Tuple[str, Dict[str, Any]]:
@@ -346,22 +418,48 @@ class ChatService:
     async def _handle_general(
         self, user_message: str, intent: IntentMatch, db: Session, context: Optional[Dict[str, Any]] = None
     ):
-        """Handle general queries using LLM for intelligent responses."""
+        """Handle general queries using RAG + LLM for intelligent responses."""
         try:
             llm_client = LLMClient()
 
-            # Build context-aware prompt
-            system_context = (
-                "You are a helpful AI assistant for a personal productivity system. "
-                "You can help with planning, inbox management, answering questions about weather, "
-                "and general assistance. Be concise, helpful, and friendly."
-            )
+            # Try to get context from RAG using the shared vectorstore
+            rag_context = ""
+            sources = []
+            try:
+                from backend.api.routes.rag import _get_vectorstore, RAG_AVAILABLE
 
-            prompt = f"{system_context}\n\nUser question: {user_message}\n\nProvide a helpful response:"
+                if RAG_AVAILABLE:
+                    vectorstore = _get_vectorstore()
+                    docs = vectorstore.similarity_search(user_message, k=3)
+                    if docs:
+                        rag_context = "\n\n".join([doc.page_content for doc in docs])
+                        sources = [doc.metadata.get("source", "knowledge_base") for doc in docs]
+                        logger.info(f"RAG retrieved {len(docs)} docs for query")
+            except Exception as e:
+                logger.debug(f"RAG retrieval skipped: {e}")
+
+            # Build context-aware prompt
+            if rag_context:
+                system_context = (
+                    "You are a helpful AI assistant. Answer based on the provided context. "
+                    "If the context doesn't contain relevant info, say so and provide general guidance."
+                )
+                prompt = f"{system_context}\n\nContext:\n{rag_context}\n\nUser question: {user_message}\n\nAnswer:"
+            else:
+                system_context = (
+                    "You are a helpful AI assistant for a personal productivity system. "
+                    "You can help with planning, inbox management, answering questions, "
+                    "and general assistance. Be concise, helpful, and friendly."
+                )
+                prompt = f"{system_context}\n\nUser question: {user_message}\n\nProvide a helpful response:"
 
             response = llm_client.call(prompt, temperature=0.7, max_tokens=500)
 
-            return response.strip(), {"intent": "general", "llm_response": True}
+            metadata = {"intent": "general", "llm_response": True}
+            if sources:
+                metadata["rag_sources"] = sources
+
+            return response.strip(), metadata
         except Exception as exc:
             logger.warning("LLM general query failed, falling back to default: %s", exc)
             message = (
@@ -504,6 +602,104 @@ async def send_message(request: SendMessageRequest, db: Session = Depends(get_db
     assistant_record = session_store.append_message(db, chat_session, "assistant", reply_text, metadata)
 
     return SendMessageResponse(message=_serialize_record(assistant_record), session_id=session_id)
+
+
+@router.post("/stream")
+async def stream_chat(request: SendMessageRequest, db: Session = Depends(get_db)):
+    """Stream chat responses, including agent thoughts."""
+    content = request.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    chat_session = session_store.get_or_create(db, request.session_id)
+    session_id = str(chat_session.id)
+
+    # Record user message
+    session_store.append_message(
+        db,
+        chat_session,
+        "user",
+        content,
+        metadata={"context": request.context} if request.context else None,
+    )
+
+    # Inject model preference into context metadata if provided
+    if request.context is None:
+        request.context = {}
+
+    if request.model_provider:
+        request.context["model_provider"] = request.model_provider
+    if request.model_name:
+        request.context["model_name"] = request.model_name
+
+    async def event_generator():
+        full_response_text = ""
+        try:
+            # Yield session ID first so client knows it
+            yield json.dumps({"type": "session_id", "session_id": session_id}) + "\n"
+
+            async for event in chat_service.stream_message(content, db, request.context):
+                yield json.dumps(event) + "\n"
+                if event["type"] == "message":
+                    full_response_text = event["content"]
+
+            # Store assistant message in DB after stream completes
+            if full_response_text:
+                session_store.append_message(db, chat_session, "assistant", full_response_text, {"streamed": True})
+
+        except Exception as exc:
+            logger.exception("Streaming error: %s", exc)
+            yield json.dumps({"type": "error", "error": str(exc)}) + "\n"
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
+
+
+@router.get("/sessions")
+async def get_sessions(limit: int = 10, db: Session = Depends(get_db)):
+    """List recent chat sessions."""
+    # This is a simplified query - in a real app we'd group by session_id and get the latest message
+    # or have a separate 'ChatSessions' table with metadata.
+    # For now, assuming ChatSession table exists.
+    sessions = db.query(ChatSession).order_by(ChatSession.updated_at.desc()).limit(limit).all()
+
+    return [
+        {
+            "id": str(s.id),
+            "created_at": s.created_at,
+            "updated_at": s.updated_at,
+            # Heuristic title: "Chat <date>" or potentially stored title if we add that column
+            "title": f"Chat {s.created_at.strftime('%b %d, %H:%M')}",
+        }
+        for s in sessions
+    ]
+
+
+@router.post("/action/{action_id}/approve")
+async def approve_action(action_id: str, request: Dict[str, bool], db: Session = Depends(get_db)):
+    """Handle user approval/rejection of an action."""
+    approved = request.get("approved", False)
+
+    proposal = db.query(ActionProposal).filter(ActionProposal.id == action_id).first()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Action proposal not found")
+
+    if proposal.status != "pending":
+        return {"message": f"Action already {proposal.status}"}
+
+    proposal.status = "approved" if approved else "rejected"
+    db.commit()
+
+    # In a real system with long-running checkpoints, we would now resume the graph thread.
+    # For this stateless MVP, we just update the DB. The next user message will trigger a new run,
+    # and the graph (if smart enough to check DB) would pick it up.
+    # Since our graph is one-shot per request currently, the 'resume' part happens when the user
+    # says "Ok I approved it, continue" or similar.
+    #
+    # To make it seamless, we could trigger a background run here, but we don't have the user's
+    # websocket/stream open to push the result back!
+    # So we just return success, and the frontend (optimistically) updates UI.
+
+    return {"status": proposal.status}
 
 
 @router.get("/history/{session_id}", response_model=List[ChatMessageDTO])
