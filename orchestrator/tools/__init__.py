@@ -32,6 +32,10 @@ from orchestrator.tools.inbox import (
     get_email_summary,
     EmailSearchOutput,
 )
+from orchestrator.tools.email import (
+    create_email_draft,
+    CreateEmailDraftOutput,
+)
 from orchestrator.tools.rag import (
     query_knowledge_base,
     RAGQueryOutput,
@@ -57,6 +61,7 @@ ALL_TOOLS = [
     get_upcoming_events,
     create_calendar_event,
     search_emails,
+    create_email_draft,
     get_recent_emails,
     get_email_summary,
     query_knowledge_base,
@@ -70,9 +75,9 @@ ALL_TOOLS = [
 PLANNING_TOOLS = [plan_day, get_priority_items]
 WEATHER_TOOLS = [get_current_weather, get_weather_forecast]
 CALENDAR_TOOLS = [get_todays_events, get_upcoming_events, create_calendar_event]
-INBOX_TOOLS = [search_emails, get_recent_emails, get_email_summary]
+INBOX_TOOLS = [search_emails, get_recent_emails, get_email_summary, create_email_draft]
 KNOWLEDGE_TOOLS = [query_knowledge_base]
-ACTION_TOOLS = [get_pending_actions]
+ACTION_TOOLS = [get_pending_actions, create_email_draft]
 CROSS_DOMAIN_TOOLS_LIST = CROSS_DOMAIN_TOOLS
 
 __all__ = [
@@ -95,6 +100,9 @@ __all__ = [
     "get_recent_emails",
     "get_email_summary",
     "EmailSearchOutput",
+    # Email actions
+    "create_email_draft",
+    "CreateEmailDraftOutput",
     # RAG
     "query_knowledge_base",
     "RAGQueryOutput",

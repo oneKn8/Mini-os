@@ -24,11 +24,11 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
 
   // Memoize stars to prevent re-rendering random positions
   const stars = useMemo(() => {
-    return Array.from({ length: 100 }).map((_, i) => ({
+    return Array.from({ length: 150 }).map(() => ({
       cx: Math.random() * 1000,
       cy: Math.random() * 600,
-      r: Math.random() * 1.5 + 0.5,
-      opacity: Math.random(),
+      r: Math.random() * 2 + 1, // Increased size slightly: 1px to 3px
+      opacity: Math.random(), // Base opacity (will be modulated by animation)
       animationDelay: `${Math.random() * 3}s`,
       animationDuration: `${2 + Math.random() * 3}s`
     }));
@@ -90,13 +90,15 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
     <div ref={containerRef} className="absolute inset-0 overflow-hidden pointer-events-none z-0 transition-colors duration-1000">
       <style>{`
         @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            0%, 100% { opacity: 0.6; transform: scale(0.8); }
             50% { opacity: 1; transform: scale(1.2); }
         }
         .animate-twinkle {
             animation-name: twinkle;
             animation-timing-function: ease-in-out;
             animation-iteration-count: infinite;
+            transform-box: fill-box;
+            transform-origin: center;
         }
       `}</style>
 
@@ -112,10 +114,10 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
             className={`w-64 h-64 rounded-full blur-[80px] transition-colors duration-1000`} 
             style={{ 
                 backgroundColor: timeOfDay === 'night' 
-                    ? 'rgba(100, 149, 237, 0.15)'  // Cornflower Blue glow for moon
+                    ? 'rgba(100, 149, 237, 0.4)'  // Glow
                     : timeOfDay === 'dusk' 
-                        ? 'rgba(251, 146, 60, 0.3)' // Orange glow for sunset
-                        : 'rgba(251, 191, 36, 0.3)' // Yellow glow for sun
+                        ? 'rgba(251, 146, 60, 0.5)' 
+                        : 'rgba(251, 191, 36, 0.5)' 
             }}
         />
         {/* Actual Moon/Sun shape */}
@@ -125,7 +127,7 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
                 backgroundColor: timeOfDay === 'night' 
                     ? '#e2e8f0' 
                     : '#fbbf24',
-                boxShadow: timeOfDay === 'night' ? '0 0 20px #e2e8f0' : '0 0 40px #fbbf24'
+                boxShadow: timeOfDay === 'night' ? '0 0 30px #e2e8f0' : '0 0 50px #fbbf24'
             }}
         />
       </div>
@@ -139,7 +141,7 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
       >
         {/* Clouds - Show more if cloudy, otherwise fewer/fainter */}
         {(isCloudy || timeOfDay !== 'night') && (
-            <g fill={timeOfDay === 'night' ? "#1a1a1a" : "rgba(255,255,255,0.4)"} opacity={isCloudy ? 0.8 : 0.3}>
+            <g fill={timeOfDay === 'night' ? "#4a5568" : "rgba(255,255,255,0.6)"} opacity={isCloudy ? 0.9 : 0.5}>
                 {clouds.map((cloud, i) => (
                     <circle 
                         key={i} 
@@ -151,7 +153,7 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
                     />
                 ))}
                 {/* Cloud Connector Lines */}
-                <path d="M-50 150 Q 200 50 400 150 T 900 150" stroke={timeOfDay === 'night' ? "#333" : "rgba(255,255,255,0.2)"} strokeWidth="2" fill="none" opacity="0.5" />
+                <path d="M-50 150 Q 200 50 400 150 T 900 150" stroke={timeOfDay === 'night' ? "#718096" : "rgba(255,255,255,0.4)"} strokeWidth="2" fill="none" opacity="0.6" />
             </g>
         )}
 
@@ -164,7 +166,8 @@ export const ParallaxWeatherBackground: React.FC<ParallaxWeatherBackgroundProps>
                         cx={star.cx} 
                         cy={star.cy} 
                         r={star.r} 
-                        opacity={star.opacity}
+                        // Removed inline opacity here so CSS animation controls it fully, 
+                        // or we can rely on the animation's opacity range.
                         className="animate-twinkle"
                         style={{
                             animationDelay: star.animationDelay,

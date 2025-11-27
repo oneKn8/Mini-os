@@ -1,167 +1,119 @@
-import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, MessageSquare, Plus, Cpu } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
-import { clsx } from 'clsx'
 
-const AVAILABLE_MODELS = [
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
-    { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
-    { id: 'meta/llama3-70b-instruct', name: 'Llama 3 70B (NVIDIA)', provider: 'nvidia' },
-    { id: 'nvidia/nemo', name: 'NeMo (NVIDIA)', provider: 'nvidia' }, // Assuming supported by provider
+const MODELS = [
+  { id: 'gpt-5', name: 'GPT-5', provider: 'openai' },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+  { id: 'meta/llama-3.1-70b-instruct', name: 'Llama 70B', provider: 'nvidia' },
+  { id: 'meta/llama-3.1-8b-instruct', name: 'Llama 8B', provider: 'nvidia' },
 ]
 
 export default function ChatHeader() {
   const { sessions, loadSessions, loadHistory, clearHistory, currentSessionId, selectedModel, setModel } = useChatStore()
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [isModelOpen, setIsModelOpen] = useState(false)
+  const historyRef = useRef<HTMLDivElement>(null)
+  const modelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-      if (isHistoryOpen) {
-          loadSessions()
-      }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHistoryOpen])
+    if (isHistoryOpen) loadSessions()
+  }, [isHistoryOpen]) // eslint-disable-line
 
-  const handleSelectSession = (sessionId: string) => {
-      loadHistory(sessionId)
-      setIsHistoryOpen(false)
-  }
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (historyRef.current && !historyRef.current.contains(e.target as Node)) setIsHistoryOpen(false)
+      if (modelRef.current && !modelRef.current.contains(e.target as Node)) setIsModelOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
-  const handleNewChat = () => {
-      clearHistory()
-      setIsHistoryOpen(false)
-  }
-
-  const handleModelSelect = (model: typeof AVAILABLE_MODELS[0]) => {
-      setModel(model.provider, model.id)
-      setIsModelOpen(false)
-  }
-
-  // Find current session title
   const currentSession = sessions.find(s => s.id === currentSessionId)
   const title = currentSession?.title || "New Chat"
-  
-  const activeModel = AVAILABLE_MODELS.find(m => m.id === selectedModel?.name) || AVAILABLE_MODELS[0]
+  const activeModel = selectedModel ? MODELS.find(m => m.id === selectedModel.name) : MODELS[0]
 
   return (
-    <div className="relative flex items-center justify-between border-b border-border-light px-4 py-3 bg-surface shadow-sm z-20">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-            {/* History Toggle */}
-            <button 
-                onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsModelOpen(false); }}
-                className="flex items-center gap-2 px-2 py-1.5 -ml-2 rounded-lg hover:bg-bg-secondary transition-colors max-w-[60%]"
-            >
-                <span className="font-semibold text-sm text-text-primary truncate">{title}</span>
-                <ChevronDown size={14} className={clsx("text-text-tertiary transition-transform shrink-0", isHistoryOpen && "rotate-180")} />
-            </button>
+    <div className="relative flex items-center justify-between px-3 py-2 bg-zinc-950">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        {/* History */}
+        <div ref={historyRef} className="relative">
+          <button 
+            onClick={() => { setIsHistoryOpen(!isHistoryOpen); setIsModelOpen(false) }}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-sm text-zinc-300 hover:bg-zinc-900 transition-colors"
+          >
+            <span className="font-medium truncate max-w-[120px]">{title}</span>
+            <ChevronDown size={12} className={`text-zinc-600 transition-transform ${isHistoryOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-            {/* Model Selector */}
-            <button 
-                onClick={() => { setIsModelOpen(!isModelOpen); setIsHistoryOpen(false); }}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-bg-secondary transition-colors border border-transparent hover:border-border-light"
-            >
-                <Cpu size={14} className="text-text-tertiary" />
-                <span className="text-xs text-text-secondary hidden sm:inline-block">{activeModel.name}</span>
-                <ChevronDown size={12} className={clsx("text-text-tertiary transition-transform shrink-0", isModelOpen && "rotate-180")} />
-            </button>
+          {isHistoryOpen && (
+            <div className="absolute top-full left-0 mt-1 w-52 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="px-3 py-2 text-[10px] text-zinc-600 uppercase tracking-wide border-b border-zinc-800">
+                History
+              </div>
+              <div className="max-h-48 overflow-y-auto">
+                {sessions.length === 0 ? (
+                  <div className="px-3 py-4 text-xs text-zinc-600 text-center">No history</div>
+                ) : (
+                  sessions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => { loadHistory(s.id); setIsHistoryOpen(false) }}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2 hover:bg-zinc-800 transition-colors ${
+                        currentSessionId === s.id ? 'text-zinc-200 bg-zinc-800/50' : 'text-zinc-400'
+                      }`}
+                    >
+                      <MessageSquare size={12} />
+                      <span className="truncate">{s.title}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
-        <button 
-            onClick={handleNewChat}
-            className="p-2 text-text-secondary hover:bg-bg-secondary rounded-lg transition-colors"
-            title="New Chat"
-        >
-            <Plus size={18} />
-        </button>
+        {/* Model */}
+        <div ref={modelRef} className="relative">
+          <button
+            onClick={() => { setIsModelOpen(!isModelOpen); setIsHistoryOpen(false) }}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900 transition-colors"
+          >
+            <Cpu size={12} />
+            <span className="hidden sm:inline">{activeModel?.name || 'Model'}</span>
+            <ChevronDown size={10} className={`transition-transform ${isModelOpen ? 'rotate-180' : ''}`} />
+          </button>
 
-        {/* History Dropdown */}
-        <AnimatePresence>
-            {isHistoryOpen && (
-                <>
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setIsHistoryOpen(false)}
-                        className="fixed inset-0 bg-black/20 z-30"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute top-full left-4 mt-1 w-64 bg-surface rounded-xl border border-border-light shadow-xl z-40 overflow-hidden flex flex-col max-h-80"
-                    >
-                        <div className="px-3 py-2 border-b border-border-light text-xs font-medium text-text-tertiary uppercase tracking-wider">
-                            Recent Chats
-                        </div>
-                        <div className="overflow-y-auto flex-1 py-1">
-                            {sessions.length === 0 ? (
-                                <div className="px-4 py-3 text-sm text-text-muted italic text-center">
-                                    No history yet
-                                </div>
-                            ) : (
-                                sessions.map((session) => (
-                                    <button
-                                        key={session.id}
-                                        onClick={() => handleSelectSession(session.id)}
-                                        className={clsx(
-                                            "w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 hover:bg-bg-secondary transition-colors",
-                                            currentSessionId === session.id ? "bg-accent-primary/5 text-accent-primary font-medium" : "text-text-secondary"
-                                        )}
-                                    >
-                                        <MessageSquare size={14} className="shrink-0" />
-                                        <span className="truncate">{session.title}</span>
-                                    </button>
-                                ))
-                            )}
-                        </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+          {isModelOpen && (
+            <div className="absolute top-full left-0 mt-1 w-44 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="px-3 py-2 text-[10px] text-zinc-600 uppercase tracking-wide border-b border-zinc-800">
+                Model
+              </div>
+              {MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => { setModel(m.provider, m.id); setIsModelOpen(false) }}
+                  className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-800 transition-colors ${
+                    selectedModel?.name === m.id ? 'text-zinc-200 bg-zinc-800/50' : 'text-zinc-400'
+                  }`}
+                >
+                  <div>{m.name}</div>
+                  <div className="text-[10px] text-zinc-600">{m.provider}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Model Dropdown */}
-        <AnimatePresence>
-            {isModelOpen && (
-                <>
-                    <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setIsModelOpen(false)}
-                        className="fixed inset-0 bg-black/20 z-30"
-                    />
-                    <motion.div
-                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute top-full left-20 mt-1 w-56 bg-surface rounded-xl border border-border-light shadow-xl z-40 overflow-hidden flex flex-col"
-                    >
-                         <div className="px-3 py-2 border-b border-border-light text-xs font-medium text-text-tertiary uppercase tracking-wider">
-                            Select Model
-                        </div>
-                        <div className="py-1">
-                            {AVAILABLE_MODELS.map((model) => (
-                                <button
-                                    key={model.id}
-                                    onClick={() => handleModelSelect(model)}
-                                    className={clsx(
-                                        "w-full text-left px-4 py-2 text-sm flex flex-col hover:bg-bg-secondary transition-colors",
-                                        (selectedModel?.name === model.id || (!selectedModel && model.id === 'gpt-4o-mini')) ? "bg-accent-primary/5 text-accent-primary font-medium" : "text-text-primary"
-                                    )}
-                                >
-                                    <span>{model.name}</span>
-                                    <span className="text-[10px] text-text-tertiary uppercase">{model.provider}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </motion.div>
-                </>
-            )}
-        </AnimatePresence>
+      <button 
+        onClick={() => { clearHistory(); setIsHistoryOpen(false) }}
+        className="p-1.5 text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900 rounded-lg transition-colors"
+        title="New Chat"
+      >
+        <Plus size={16} />
+      </button>
     </div>
   )
 }

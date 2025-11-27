@@ -32,7 +32,20 @@ async def get_preferences(db: Session = Depends(get_db)):
     # TODO: Get user from session/auth token
     user = db.query(User).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Seed a default user if none exists so the app can run locally without auth
+        user = User(
+            id=uuid.uuid4(),
+            email="user@example.com",
+            name="Default User",
+            password_hash="dev-placeholder",
+            timezone="UTC",
+            location_city="",
+            location_country="",
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
     prefs = db.query(UserPreferences).filter(UserPreferences.user_id == user.id).first()
 

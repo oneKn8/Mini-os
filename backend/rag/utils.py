@@ -312,11 +312,24 @@ def get_llm(**kwargs) -> Any:
         if not _OPENAI_AVAILABLE:
             raise RuntimeError("langchain-openai is required but not installed")
 
-        return ChatOpenAI(
-            model=settings.llm.model_name or "gpt-4o-mini",
-            temperature=kwargs.get("temperature", 0.3),
-            max_tokens=kwargs.get("max_tokens"),
-        )
+        model_name = settings.llm.model_name or "gpt-4o-mini"
+        is_gpt5 = model_name and model_name.startswith("gpt-5")
+
+        # GPT-5 models have restrictions:
+        # - Use max_completion_tokens instead of max_tokens
+        # - Only support default temperature (1)
+        if is_gpt5:
+            return ChatOpenAI(
+                model=model_name,
+                temperature=1.0,  # GPT-5 only supports default temperature of 1
+                model_kwargs={"max_completion_tokens": kwargs.get("max_tokens", 2048)},
+            )
+        else:
+            return ChatOpenAI(
+                model=model_name,
+                temperature=kwargs.get("temperature", 0.3),
+                max_tokens=kwargs.get("max_tokens"),
+            )
 
     else:
         raise RuntimeError(

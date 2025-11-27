@@ -3,15 +3,15 @@ Calendar API routes
 """
 
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
 from backend.api.models import Item, User, ConnectedAccount
+from backend.api.sse import emit_calendar_update
 from backend.integrations.calendar import CalendarClient
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
@@ -83,7 +83,7 @@ async def get_calendar_events(
             Item.source_type == "event",
             Item.start_datetime >= start_date,
             Item.start_datetime <= end_date,
-            Item.is_archived == False,
+            Item.is_archived.is_(False),
         )
         .order_by(Item.start_datetime)
         .all()
@@ -118,6 +118,16 @@ async def create_calendar_event(event: EventCreate, db: Session = Depends(get_db
     try:
         result = client.create_event(
             title=event.title, start=event.start, end=event.end, description=event.description, location=event.location
+        )
+        # Emit calendar update event
+        await emit_calendar_update(
+            "event_created",
+            {
+                "event_id": result.get("id"),
+                "title": event.title,
+                "start": event.start.isoformat(),
+                "end": event.end.isoformat(),
+            },
         )
         return result
     except Exception as e:
@@ -162,6 +172,14 @@ async def update_calendar_event(event_id: str, event: EventUpdate, db: Session =
 
     try:
         result = client.update_event(item.source_id, **updates)
+        # Emit calendar update event
+        await emit_calendar_update(
+            "event_updated",
+            {
+                "event_id": event_id,
+                "updates": updates,
+            },
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update event: {str(e)}")
@@ -193,6 +211,14 @@ async def delete_calendar_event(event_id: str, db: Session = Depends(get_db)):
         # Also mark as archived/deleted in DB
         item.is_archived = True
         db.commit()
+
+        # Emit calendar update event
+        await emit_calendar_update(
+            "event_deleted",
+            {
+                "event_id": event_id,
+            },
+        )
 
         return {"status": "success"}
     except Exception as e:

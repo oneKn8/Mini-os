@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "========================================="
-echo "  Starting Personal Ops Center (NATIVE)"
+echo "  Starting Personal Ops Center"
 echo "========================================="
 echo ""
 
@@ -12,45 +12,61 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
-# Load .env
 set -a
-if [ -f .env ]; then
-    source .env
-fi
+source .env
 set +a
 
-# Use LOCAL_DB_PORT from .env if set, otherwise default to 5433 (your active port)
-DB_PORT=${LOCAL_DB_PORT:-5433}
+DB_PORT=${DOCKER_DB_PORT:-5643}
+DB_PASSWORD=${POSTGRES_PASSWORD:-changeme}
 API_PORT=${LOCAL_API_PORT:-8101}
 FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
 
-echo "[1/4] Checking PostgreSQL..."
-# Skip systemctl check if we are using a custom port (likely Docker or custom install)
-if [ "$DB_PORT" != "5432" ]; then
-    echo "Using custom DB port: $DB_PORT"
-else
-    if ! sudo systemctl is-active --quiet postgresql; then
-        echo "Starting PostgreSQL service..."
-        sudo systemctl start postgresql
-    fi
+echo "[1/5] Starting PostgreSQL in Docker..."
+if ! docker compose up -d postgres; then
+    echo "[ERROR] Failed to start Docker container."
+    echo "Make sure Docker is running."
+    exit 1
 fi
-echo "[OK] PostgreSQL check complete"
 
 echo ""
-echo "[2/4] Running database migrations..."
-# Ensure DATABASE_URL matches the port we found
-export DATABASE_URL="postgresql://ops_user:ops_password@localhost:${DB_PORT}/ops_center"
+echo "[2/5] Waiting for database..."
+sleep 5
+
+MAX_RETRIES=15
+RETRY_COUNT=0
+while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+    if docker compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
+        echo "[OK] Database is ready!"
+        break
+    fi
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    echo "    Waiting... ($RETRY_COUNT/$MAX_RETRIES)"
+    sleep 2
+done
+
+if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+    echo "[ERROR] Database failed to start!"
+    exit 1
+fi
+
+echo ""
+echo "[3/5] Running database migrations..."
+export DATABASE_URL="postgresql://ops_user:${DB_PASSWORD}@localhost:${DB_PORT}/ops_center"
 alembic upgrade head
 
 echo ""
-echo "[3/4] Starting Backend API..."
+echo "[4/5] Starting Backend API..."
+# Kill any existing backend process on this port
+fuser -k "${API_PORT}/tcp" >/dev/null 2>&1
 uvicorn backend.api.server:app --host 0.0.0.0 --port "${API_PORT}" --reload > backend.log 2>&1 &
 BACKEND_PID=$!
 echo "    Backend PID: $BACKEND_PID"
 sleep 3
 
 echo ""
-echo "[4/4] Starting Frontend..."
+echo "[5/5] Starting Frontend..."
+# Kill any existing frontend process on this port
+fuser -k "${FRONTEND_PORT}/tcp" >/dev/null 2>&1
 cd frontend
 npm run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
@@ -58,8 +74,8 @@ cd ..
 echo "    Frontend PID: $FRONTEND_PID"
 
 # Save PIDs
-echo "$BACKEND_PID" > .native.pid
-echo "$FRONTEND_PID" >> .native.pid
+echo "$BACKEND_PID" > .ops.pid
+echo "$FRONTEND_PID" >> .ops.pid
 
 sleep 3
 

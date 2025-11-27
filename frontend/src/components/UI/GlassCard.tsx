@@ -40,12 +40,11 @@ export default function GlassCard({
     >
       {/* Subtle inner glow gradient for depth */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-50 pointer-events-none" />
-      
+
       {/* Content */}
-      <div className="relative z-10 h-full">
+      <div className="relative z-10 h-full flex flex-col">
         {children}
       </div>
     </motion.div>
   )
 }
-

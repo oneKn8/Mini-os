@@ -203,6 +203,11 @@ export class ChatAPI {
       const response = await fetch(`${API_BASE_URL}/api/chat/history/${id}`)
 
       if (!response.ok) {
+        if (response.status === 404) {
+          // Session no longer exists; clear it so UI can start fresh
+          this.clearSession()
+          return []
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 

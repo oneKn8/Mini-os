@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "========================================="
-echo "  Stopping Personal Ops Center (NATIVE)"
+echo "  Stopping Personal Ops Center"
 echo "========================================="
 echo ""
 
@@ -28,14 +28,23 @@ kill_port() {
     fi
 }
 
-if [ -f .native.pid ]; then
+# Try stopping via PID file first
+if [ -f .ops.pid ]; then
     echo "Stopping services from PID file..."
     # Read PIDs into array
     while IFS= read -r pid; do
         if kill -0 "$pid" 2>/dev/null; then
             kill "$pid" 2>/dev/null
         fi
-    done < .native.pid
+    done < .ops.pid
+    rm -f .ops.pid
+fi
+
+# Check for legacy PID files just in case
+if [ -f .local.pid ]; then
+    rm -f .local.pid
+fi
+if [ -f .native.pid ]; then
     rm -f .native.pid
 fi
 
@@ -44,13 +53,14 @@ echo "Ensuring ports are clear..."
 kill_port $API_PORT "Backend API"
 kill_port $FRONTEND_PORT "Frontend"
 
-# Fallback: Kill by process name just in case
+# Fallback: Kill by process name
 pkill -f "uvicorn backend.api.server:app" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 
 echo ""
-echo "[OK] All services stopped and ports cleared!"
+echo "Stopping database..."
+docker compose stop postgres
+
 echo ""
-echo "Note: PostgreSQL service is still running"
-echo "To stop PostgreSQL: sudo systemctl stop postgresql"
+echo "[OK] All services stopped and ports cleared!"
 echo ""

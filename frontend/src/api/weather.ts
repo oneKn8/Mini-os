@@ -37,10 +37,29 @@ export async function fetchCurrentWeather(): Promise<WeatherCurrent> {
   return response.json()
 }
 
+import { useQuery } from '@tanstack/react-query'
+
 export async function fetchForecast(days: number = 7): Promise<WeatherForecast> {
   const response = await fetch(`/api/weather/forecast?days=${days}`)
   if (!response.ok) {
     throw new Error('Failed to fetch forecast')
   }
   return response.json()
+}
+
+// React Query hooks
+export function useCurrentWeather() {
+  return useQuery({
+    queryKey: ['weather', 'current'],
+    queryFn: fetchCurrentWeather,
+    refetchInterval: 300000, // Refetch every 5 minutes
+  })
+}
+
+export function useWeatherForecast(days: number = 7) {
+  return useQuery({
+    queryKey: ['weather', 'forecast', days],
+    queryFn: () => fetchForecast(days),
+    refetchInterval: 300000, // Refetch every 5 minutes
+  })
 }

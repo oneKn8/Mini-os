@@ -45,6 +45,8 @@ class RAGQueryRequest(BaseModel):
 class RAGQueryResponse(BaseModel):
     """Response for RAG query."""
 
+    model_config = {"protected_namespaces": ()}
+
     answer: str
     sources: List[Dict[str, Any]] = []
     query: str

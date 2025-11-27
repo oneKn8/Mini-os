@@ -36,6 +36,7 @@ from backend.api.routes import (
     agents,
     calendar,
     weather,
+    realtime,
 )
 
 # Configure logging
@@ -115,6 +116,7 @@ app.include_router(dashboard.router, prefix="/api")
 app.include_router(agents.router, prefix="/api")
 app.include_router(calendar.router, prefix="/api")
 app.include_router(weather.router, prefix="/api")
+app.include_router(realtime.router, prefix="/api")
 
 
 @app.exception_handler(Exception)

@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react'
-import { Mail, Calendar, Moon, Globe, Cpu, LogOut } from 'lucide-react'
+import { Mail, Calendar, Moon, Globe, Cpu, LogOut, Shield } from 'lucide-react'
 import GlassCard from '../components/UI/GlassCard'
+import { useChatStore } from '../store/chatStore'
+
+const AVAILABLE_MODELS = [
+    // OpenAI Models
+    { id: 'gpt-5', name: 'GPT-5', provider: 'openai' },
+    { id: 'gpt-5-mini', name: 'GPT-5 Mini', provider: 'openai' },
+    { id: 'gpt-5-nano', name: 'GPT-5 Nano', provider: 'openai' },
+    { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+    // NVIDIA NIM Models
+    { id: 'meta/llama-3.1-70b-instruct', name: 'Llama 3.1 70B (NVIDIA)', provider: 'nvidia' },
+    { id: 'meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B (NVIDIA)', provider: 'nvidia' },
+    { id: 'mistralai/mistral-large', name: 'Mistral Large (NVIDIA)', provider: 'nvidia' },
+    { id: 'google/gemma-2-9b-it', name: 'Gemma 2 9B (NVIDIA)', provider: 'nvidia' },
+]
 
 interface ConnectedAccount {
   id: string
@@ -20,6 +35,7 @@ interface Preferences {
 }
 
 export default function SettingsView() {
+  const { selectedModel, setModel } = useChatStore()
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([])
   const [preferences, setPreferences] = useState<Preferences>({
     quiet_hours_enabled: true,
@@ -71,7 +87,7 @@ export default function SettingsView() {
       if (response.ok) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const data = await response.json()
-        alert(`✅ Authorization started! A browser window should open shortly.`)
+        alert('Authorization started! A browser window should open shortly.')
         
         setTimeout(async () => {
           await fetchAccounts()
@@ -108,7 +124,7 @@ export default function SettingsView() {
   }
 
   return (
-    <div className="space-y-8 pb-20 max-w-5xl mx-auto">
+    <div className="space-y-8 pb-20 max-w-5xl mx-auto relative z-10">
       <h1 className="text-4xl font-bold text-white text-glow mb-8">System Configuration</h1>
 
       {error && (
@@ -199,16 +215,33 @@ export default function SettingsView() {
 
              {/* AI Model Selection */}
              <div>
-               <label className="text-sm font-bold text-text-secondary mb-2 block">AI Provider</label>
+               <label className="text-sm font-bold text-text-secondary mb-2 block">AI Model</label>
                <select 
-                 value={preferences.ai_provider}
-                 onChange={(e) => updatePreferences({ ai_provider: e.target.value })}
+                 value={selectedModel ? `${selectedModel.provider}:${selectedModel.name}` : 'openai:gpt-5'}
+                 onChange={(e) => {
+                   const [provider, name] = e.target.value.split(':')
+                   setModel(provider, name)
+                 }}
                  className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent-primary outline-none appearance-none"
                >
-                 <option value="openai">OpenAI (GPT-4o)</option>
-                 <option value="nvidia">NVIDIA NIM (Llama 3)</option>
-                 <option value="anthropic">Anthropic (Claude 3.5)</option>
+                 <optgroup label="OpenAI">
+                   {AVAILABLE_MODELS.filter(m => m.provider === 'openai').map(model => (
+                     <option key={model.id} value={`${model.provider}:${model.id}`}>
+                       {model.name}
+                     </option>
+                   ))}
+                 </optgroup>
+                 <optgroup label="NVIDIA NIM">
+                   {AVAILABLE_MODELS.filter(m => m.provider === 'nvidia').map(model => (
+                     <option key={model.id} value={`${model.provider}:${model.id}`}>
+                       {model.name}
+                     </option>
+                   ))}
+                 </optgroup>
                </select>
+               <p className="text-xs text-text-tertiary mt-2">
+                 Current: {selectedModel ? `${AVAILABLE_MODELS.find(m => m.id === selectedModel.name && m.provider === selectedModel.provider)?.name || selectedModel.name}` : 'GPT-5 (default)'}
+               </p>
              </div>
 
              {/* Sync Interval */}

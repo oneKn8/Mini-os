@@ -14,6 +14,8 @@ from orchestrator.state import OpsAgentState
 class AgentContext(BaseModel):
     """Context passed to agents during execution (legacy support)."""
 
+    model_config = {"arbitrary_types_allowed": True, "protected_namespaces": ()}
+
     user_id: str
     intent: str  # refresh_inbox, plan_day, handle_item, etc.
     items: List[Dict] = []
@@ -24,9 +26,6 @@ class AgentContext(BaseModel):
     # Added model override support
     model_provider: Optional[str] = None
     model_name: Optional[str] = None
-
-    class Config:
-        arbitrary_types_allowed = True
 
     @classmethod
     def from_state(cls, state: OpsAgentState) -> "AgentContext":

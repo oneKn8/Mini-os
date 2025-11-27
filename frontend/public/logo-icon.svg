@@ -1,0 +1,54 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4c6ef5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#845ef7;stop-opacity:1" />
+    </linearGradient>
+    <filter id="iconGlow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#iconGradient)"/>
+  
+  <!-- Activity bars -->
+  <g transform="translate(32, 32)">
+    <rect x="-6" y="-10" width="2.5" height="8" rx="1.25" fill="white" filter="url(#iconGlow)">
+      <animate attributeName="height" values="8;12;8" dur="1.5s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="-10;-11;-10" dur="1.5s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="-1.5" y="-8" width="2.5" height="10" rx="1.25" fill="white" filter="url(#iconGlow)">
+      <animate attributeName="height" values="10;14;10" dur="1.5s" begin="0.2s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="-8;-9;-8" dur="1.5s" begin="0.2s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="3" y="-6" width="2.5" height="8" rx="1.25" fill="white" filter="url(#iconGlow)">
+      <animate attributeName="height" values="8;12;8" dur="1.5s" begin="0.4s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="-6;-7;-6" dur="1.5s" begin="0.4s" repeatCount="indefinite"/>
+    </rect>
+    
+    <!-- Bottom bars -->
+    <rect x="-6" y="2" width="2.5" height="8" rx="1.25" fill="white" filter="url(#iconGlow)">
+      <animate attributeName="height" values="8;12;8" dur="1.5s" begin="0.6s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="2;3;2" dur="1.5s" begin="0.6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="-1.5" y="0" width="2.5" height="10" rx="1.25" fill="white" filter="url(#iconGlow)">
+      <animate attributeName="height" values="10;14;10" dur="1.5s" begin="0.8s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="0;1;0" dur="1.5s" begin="0.8s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="3" y="2" width="2.5" height="8" rx="1.25" fill="white" filter="url(#iconGlow)">
+      <animate attributeName="height" values="8;12;8" dur="1.5s" begin="1s" repeatCount="indefinite"/>
+      <animate attributeName="y" values="2;3;2" dur="1.5s" begin="1s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+  
+  <!-- Center dot -->
+  <circle cx="32" cy="32" r="2" fill="white" filter="url(#iconGlow)">
+    <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite"/>
+  </circle>
+</svg>
+

@@ -35,21 +35,43 @@ function Layout() {
     const saved = localStorage.getItem('sidebarCollapsed')
     return saved ? JSON.parse(saved) : true // Default to collapsed for Beast Mode look
   })
+  const [isChatCollapsed, setIsChatCollapsed] = useState(() => {
+    const saved = localStorage.getItem('chatCollapsed')
+    return saved ? JSON.parse(saved) : false
+  })
   const location = useLocation()
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(isSidebarCollapsed))
   }, [isSidebarCollapsed])
 
+  useEffect(() => {
+    const syncChatCollapsed = () => {
+      const saved = localStorage.getItem('chatCollapsed')
+      setIsChatCollapsed(saved ? JSON.parse(saved) : false)
+    }
+    const handleCustom = (event: Event) => {
+      const detail = (event as CustomEvent<boolean>).detail
+      if (typeof detail === 'boolean') {
+        setIsChatCollapsed(detail)
+      } else {
+        syncChatCollapsed()
+      }
+    }
+    const handleExpand = () => setIsChatCollapsed(false)
+    window.addEventListener('storage', syncChatCollapsed)
+    window.addEventListener('chat-collapsed-change', handleCustom as EventListener)
+    window.addEventListener('chatExpand', handleExpand)
+    return () => {
+      window.removeEventListener('storage', syncChatCollapsed)
+      window.removeEventListener('chat-collapsed-change', handleCustom as EventListener)
+      window.removeEventListener('chatExpand', handleExpand)
+    }
+  }, [])
+
   return (
     <div className="flex h-screen w-full bg-bg-primary text-text-primary overflow-hidden font-sans relative">
       
-      {/* Ambient Background Glows (Global) */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent-primary/5 rounded-full blur-[150px] animate-float"></div>
-         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent-secondary/5 rounded-full blur-[150px] animate-float" style={{ animationDelay: '2s' }}></div>
-      </div>
-
       {/* Desktop Floating Sidebar */}
       <motion.aside 
         className="hidden md:flex flex-col fixed left-4 top-4 bottom-4 z-50 rounded-2xl glass-panel border-border-light shadow-2xl overflow-hidden"
@@ -184,39 +206,79 @@ function Layout() {
 
       {/* Main Content + Chat Resizable Group */}
       <div className={clsx(
-          "flex-1 h-full overflow-hidden pt-16 md:pt-0 relative transition-all duration-400 ease-spring",
+          "flex-1 h-full overflow-hidden pt-16 md:pt-0 relative transition-all duration-400 ease-spring z-10",
           "md:pl-[100px]", // Base padding for collapsed sidebar
           !isSidebarCollapsed && "md:pl-[260px]" // Padding when expanded
       )}>
-          <ChatCollapseButton />
-          <PanelGroup direction="horizontal" className="h-full w-full">
-            <Panel defaultSize={70} minSize={30}>
-                <main className="h-full w-full overflow-y-auto overflow-x-hidden md:p-6 px-4 scroll-smooth">
-                    <div className="mx-auto max-w-7xl min-h-full pb-20">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={location.pathname}
-                                initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: -20, scale: 0.98 }}
-                                transition={{ duration: 0.3, ease: "easeOut" }}
-                                className="min-h-full"
-                            >
-                                <Outlet />
-                            </motion.div>
-                        </AnimatePresence>
-                    </div>
-                </main>
-            </Panel>
-            
-            <PanelResizeHandle className="w-1 hover:w-1.5 bg-transparent hover:bg-accent-primary/50 transition-all duration-300 flex items-center justify-center group z-50">
-                <div className="h-12 w-1 rounded-full bg-white/10 group-hover:bg-accent-primary"></div>
-            </PanelResizeHandle>
-            
-            <Panel defaultSize={30} minSize={0} maxSize={50} className="bg-surface/90 backdrop-blur-xl border-l border-white/5 shadow-2xl z-40 relative">
-                <ChatWindow />
-            </Panel>
-          </PanelGroup>
+          <ChatCollapseButton 
+            isCollapsed={isChatCollapsed} 
+            onExpand={() => {
+              localStorage.setItem('chatCollapsed', JSON.stringify(false))
+              setIsChatCollapsed(false)
+              window.dispatchEvent(new CustomEvent('chat-collapsed-change', { detail: false }))
+            }} 
+          />
+          {isChatCollapsed ? (
+            <main className="app-main h-full w-full overflow-y-auto overflow-x-hidden md:p-6 px-4 scroll-smooth bg-bg-primary relative isolate z-50">
+              <div className="mx-auto max-w-7xl min-h-full pb-20">
+                  <AnimatePresence mode="wait">
+                      <motion.div
+                          key={location.pathname}
+                          initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -20, scale: 0.98 }}
+                          transition={{ duration: 0.3, ease: "easeOut" }}
+                          className="min-h-full"
+                      >
+                          <Outlet />
+                      </motion.div>
+                  </AnimatePresence>
+              </div>
+            </main>
+          ) : (
+            <PanelGroup direction="horizontal" className="h-full w-full">
+              <Panel defaultSize={70} minSize={30}>
+                  <main className="app-main h-full w-full overflow-y-auto overflow-x-hidden md:p-6 px-4 scroll-smooth bg-bg-primary relative isolate z-50">
+                      <div className="mx-auto max-w-7xl min-h-full pb-20">
+                          <AnimatePresence mode="wait">
+                              <motion.div
+                                  key={location.pathname}
+                                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -20, scale: 0.98 }}
+                                  transition={{ duration: 0.3, ease: "easeOut" }}
+                                  className="min-h-full"
+                              >
+                                  <Outlet />
+                              </motion.div>
+                          </AnimatePresence>
+                      </div>
+                  </main>
+              </Panel>
+              
+              <PanelResizeHandle className="w-1 hover:w-1.5 bg-transparent hover:bg-accent-primary/50 transition-all duration-300 flex items-center justify-center group z-50">
+                  <div className="h-12 w-1 rounded-full bg-white/10 group-hover:bg-accent-primary"></div>
+              </PanelResizeHandle>
+              
+              <Panel defaultSize={30} minSize={0} maxSize={50} className="bg-surface/90 backdrop-blur-xl border-l border-white/5 shadow-2xl z-40 relative">
+                  <ChatWindow />
+              </Panel>
+            </PanelGroup>
+          )}
+          {isChatCollapsed && (
+            <button
+              onClick={() => {
+                localStorage.setItem('chatCollapsed', JSON.stringify(false))
+                setIsChatCollapsed(false)
+                window.dispatchEvent(new CustomEvent('chat-collapsed-change', { detail: false }))
+              }}
+              className="fixed bottom-6 right-6 md:bottom-8 md:right-8 p-4 bg-accent-primary text-white rounded-full shadow-[0_0_20px_rgba(76,110,245,0.5)] hover:bg-accent-primary-hover transition-colors z-50 flex items-center gap-2"
+              aria-label="Expand chat"
+            >
+              <MessageSquare size={22} />
+              <span className="hidden sm:inline text-sm font-medium">Chat</span>
+            </button>
+          )}
       </div>
     </div>
   )
@@ -244,25 +306,7 @@ function LayoutWithNavigation() {
 }
 
 export default LayoutWithNavigation
-function ChatCollapseButton() {
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    const saved = localStorage.getItem('chatCollapsed')
-    return saved ? JSON.parse(saved) : false
-  })
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('chatCollapsed')
-      setIsCollapsed(saved ? JSON.parse(saved) : false)
-    }
-    window.addEventListener('storage', handleStorageChange)
-    const interval = setInterval(handleStorageChange, 100)
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      clearInterval(interval)
-    }
-  }, [])
-
+function ChatCollapseButton({ isCollapsed, onExpand }: { isCollapsed: boolean, onExpand: () => void }) {
   if (!isCollapsed) return null
 
   return (
@@ -272,11 +316,7 @@ function ChatCollapseButton() {
       exit={{ opacity: 0, scale: 0 }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      onClick={() => {
-        localStorage.setItem('chatCollapsed', JSON.stringify(false))
-        setIsCollapsed(false)
-        window.dispatchEvent(new CustomEvent('chatExpand'))
-      }}
+      onClick={onExpand}
       className="fixed bottom-8 right-8 p-4 bg-accent-primary text-white rounded-full shadow-[0_0_20px_rgba(76,110,245,0.5)] hover:bg-accent-primary-hover transition-colors z-50 flex items-center gap-2"
       aria-label="Expand chat"
     >
@@ -284,4 +324,3 @@ function ChatCollapseButton() {
     </motion.button>
   )
 }
-

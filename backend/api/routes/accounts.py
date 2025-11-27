@@ -3,27 +3,44 @@ Account connection and management API routes.
 """
 
 import os
-from typing import List, Optional
-from uuid import UUID
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
-from backend.api.models import ConnectedAccount, User, UserPreferences
+from backend.api.models import ConnectedAccount, User
 from backend.integrations.gmail import GmailClient
 from backend.integrations.calendar import CalendarClient
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
+def _get_or_create_default_user(db: Session) -> User:
+    """Ensure a user exists so local dev works without auth."""
+    user = db.query(User).first()
+    if user:
+        return user
+
+    user = User(
+        id=uuid.uuid4(),
+        email="user@example.com",
+        name="Default User",
+        password_hash="dev-placeholder",
+        timezone="UTC",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 @router.get("/connected")
 async def get_connected_accounts(db: Session = Depends(get_db)):
     """Get all connected accounts for the current user."""
     # TODO: Get user from session/auth token
-    user = db.query(User).first()
-    if not user:
-        return []
+    user = _get_or_create_default_user(db)
 
     accounts = (
         db.query(ConnectedAccount)
@@ -53,9 +70,7 @@ async def connect_gmail(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Gmail OAuth credentials not configured")
 
     # TODO: Get user from session/auth token
-    user = db.query(User).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _get_or_create_default_user(db)
 
     def authorize_in_background():
         """Run OAuth flow in background thread."""
@@ -141,9 +156,7 @@ async def connect_calendar(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Calendar OAuth credentials not configured")
 
     # TODO: Get user from session/auth token
-    user = db.query(User).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    user = _get_or_create_default_user(db)
 
     def authorize_in_background():
         """Run OAuth flow in background thread."""

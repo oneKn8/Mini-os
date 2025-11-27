@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
 from backend.api.models import ActionProposal, PreferenceSignal
+from backend.api.websocket import emit_action_update
 from backend.executor.action_executor import ActionExecutor
 
 router = APIRouter(prefix="/actions", tags=["actions"])
@@ -65,6 +66,11 @@ async def approve_action(action_id: str, db: Session = Depends(get_db)):
     db.add(signal)
     db.commit()
 
+    # Emit action update via WebSocket
+    await emit_action_update(
+        action_id, "approved", {"execution_status": log.executor_status, "log_id": str(log.id) if log else None}
+    )
+
     return {"status": "approved", "execution_status": log.executor_status}
 
 
@@ -91,5 +97,8 @@ async def reject_action(action_id: str, db: Session = Depends(get_db)):
     )
     db.add(signal)
     db.commit()
+
+    # Emit action update via WebSocket
+    await emit_action_update(action_id, "rejected", {})
 
     return {"status": "rejected"}

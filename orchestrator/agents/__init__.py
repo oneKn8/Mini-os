@@ -1,23 +1,16 @@
 # Agents package
+# Updated for dynamic agent architecture - removed hardcoded agent types
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
-from orchestrator.agents.email_agent import EmailAgent
-from orchestrator.agents.event_agent import EventAgent
-from orchestrator.agents.planner_agent import PlannerAgent
-from orchestrator.agents.preference_agent import PreferenceAgent
-from orchestrator.agents.rag_agent import RAGAgent
-from orchestrator.agents.safety_agent import SafetyAgent
-from orchestrator.agents.triage_agent import TriageAgent
+from orchestrator.agents.conversational_agent import ConversationalAgent
+from orchestrator.agents.dynamic_agent import DynamicAgent
+from orchestrator.agents.query_analyzer import QueryAnalyzer
 
 __all__ = [
     "AgentContext",
     "AgentResult",
     "BaseAgent",
-    "EmailAgent",
-    "EventAgent",
-    "PlannerAgent",
-    "PreferenceAgent",
-    "RAGAgent",
-    "SafetyAgent",
-    "TriageAgent",
+    "ConversationalAgent",
+    "DynamicAgent",
+    "QueryAnalyzer",
 ]

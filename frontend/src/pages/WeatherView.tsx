@@ -1,20 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Cloud, 
-  Sun, 
   Wind, 
   Droplets, 
   MapPin,
-  CloudRain,
-  CloudLightning,
-  Snowflake,
-  Moon
+  Sun
 } from 'lucide-react';
 import { ParallaxWeatherBackground } from '../components/Weather/ParallaxWeatherBackground';
 import { ParallaxChart } from '../components/Weather/ParallaxChart';
 import { StatCard } from '../components/Weather/StatCard';
 import { ForecastDay } from '../components/Weather/ForecastDay';
-import { fetchCurrentWeather, fetchForecast, WeatherCurrent, WeatherForecast } from '../api/weather';
+import WeatherIcon from '../components/Weather/WeatherIcon';
+import { useWeatherWithRealtime } from '../hooks/useWeather';
+import { animateOnMount, staggerAnimation } from '../utils/gsap';
 
 // --- CONSTANTS ---
 const THEME = {
@@ -24,10 +21,12 @@ const THEME = {
 
 export default function WeatherView() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [current, setCurrent] = useState<WeatherCurrent | null>(null);
-  const [forecast, setForecast] = useState<WeatherForecast | null>(null);
-  const [loading, setLoading] = useState(true);
   const [timeOfDay, setTimeOfDay] = useState<'day' | 'night' | 'dusk' | 'dawn'>('day');
+  const heroRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  // Use real-time weather hook
+  const { current, forecast, isLoading } = useWeatherWithRealtime(7);
 
   useEffect(() => {
     // Calculate time of day
@@ -36,24 +35,28 @@ export default function WeatherView() {
     else if (hour >= 7 && hour < 17) setTimeOfDay('day');
     else if (hour >= 17 && hour < 19) setTimeOfDay('dusk');
     else setTimeOfDay('night');
-
-    const loadData = async () => {
-      try {
-        const [curr, forc] = await Promise.all([
-          fetchCurrentWeather(),
-          fetchForecast(7)
-        ]);
-        setCurrent(curr);
-        setForecast(forc);
-      } catch (error) {
-        console.error('Failed to load weather:', error);
-        // Use fallback/mock if API fails (for demo purposes)
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
   }, []);
+
+  // Animate on mount
+  useEffect(() => {
+    if (heroRef.current) {
+      animateOnMount(heroRef.current, {
+        opacity: 0,
+        y: 30,
+        duration: 0.8,
+      });
+    }
+    if (statsRef.current) {
+      const statCards = statsRef.current.querySelectorAll('[data-stat-card]');
+      if (statCards.length > 0) {
+        staggerAnimation(Array.from(statCards), {
+          opacity: 0,
+          scale: 0.9,
+          duration: 0.5,
+        }, 0.1);
+      }
+    }
+  }, [current, forecast]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     // Normalize mouse position relative to center of screen
@@ -62,25 +65,13 @@ export default function WeatherView() {
     setMousePos({ x, y });
   };
 
-  // Helper to get icon
-  const getWeatherIcon = (condition: string) => {
-    const lower = condition?.toLowerCase() || '';
-    if (lower.includes('rain')) return CloudRain;
-    if (lower.includes('storm')) return CloudLightning;
-    if (lower.includes('snow')) return Snowflake;
-    if (lower.includes('cloud')) return Cloud;
-    if (timeOfDay === 'night') return Moon;
-    return Sun;
-  };
 
   const chartData = forecast?.forecast.map(f => Math.round(f.temperature)) || [72, 75, 68, 70, 78, 80, 74];
   const days = forecast?.forecast.map(f => new Date(f.datetime).toLocaleDateString('en-US', { weekday: 'short' })) || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  const WeatherIconMain = current ? getWeatherIcon(current.weather[0].main) : Cloud;
-
   return (
     <div 
-      className="relative w-full h-full min-h-screen overflow-hidden select-none bg-[#000000] text-[#faf9f6] -m-4 md:-m-6" // Negative margin to counteract layout padding if necessary, or use w-full h-full if layout allows
+      className="relative w-full min-h-screen overflow-hidden select-none bg-[#000000] text-[#faf9f6] p-4 md:p-8"
       onMouseMove={handleMouseMove}
     >
       <style>{`
@@ -112,42 +103,40 @@ export default function WeatherView() {
         }
       `}</style>
 
-      <ParallaxWeatherBackground 
-        mouseX={mousePos.x} 
-        mouseY={mousePos.y} 
-        timeOfDay={timeOfDay} 
-        weatherCondition={current?.weather[0]?.main || 'Clear'}
-      />
+      <div className="relative max-w-6xl mx-auto rounded-3xl overflow-hidden border border-border-light/20 shadow-[0_10px_60px_rgba(0,0,0,0.45)] bg-black/60">
+        <ParallaxWeatherBackground 
+          mouseX={mousePos.x} 
+          mouseY={mousePos.y} 
+          timeOfDay={timeOfDay} 
+          weatherCondition={current?.weather[0]?.main || 'Clear'}
+        />
 
-      {/* HEADER (If layout header is not sufficient, but we are inside a layout. 
-          The user design has a header. We can include it as part of the view content 
-          or assume the layout header is enough. The user design implies a specific header style.) 
-      */}
-      <header className="h-16 flex items-center justify-between px-8 border-b border-[#1a1a1a]/50 backdrop-blur-sm z-40 relative">
-        <div className="flex items-center">
-          <h1 className={`${THEME.textPrimary} text-lg font-light tracking-wide`}>
-            Weather
-          </h1>
-           <div className="flex items-center ml-4 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
-             <MapPin size={12} className="text-blue-400 mr-2" />
-             <span className="text-blue-400 text-xs tracking-wider uppercase">
-               {current ? `${current.location.city}, ${current.location.country}` : 'Loading...'}
-             </span>
-           </div>
-        </div>
-        <div className="text-xs text-gray-500 font-mono uppercase">
-             {timeOfDay} Mode
-        </div>
-      </header>
+        {/* HEADER */}
+        <header className="h-16 flex items-center justify-between px-4 md:px-8 border-b border-[#1a1a1a]/50 backdrop-blur-sm z-40 relative">
+          <div className="flex items-center">
+            <h1 className={`${THEME.textPrimary} text-lg font-light tracking-wide`}>
+              Weather
+            </h1>
+             <div className="flex items-center ml-4 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+               <MapPin size={12} className="text-blue-400 mr-2" />
+               <span className="text-blue-400 text-xs tracking-wider uppercase">
+                 {current ? `${current.location.city}, ${current.location.country}` : 'Loading...'}
+               </span>
+             </div>
+          </div>
+          <div className="text-xs text-gray-500 font-mono uppercase">
+               {timeOfDay} Mode
+          </div>
+        </header>
 
-      {/* DASHBOARD CONTENT */}
-      <div className="flex-1 overflow-y-auto p-8 z-40 relative scrollbar-hide h-[calc(100vh-4rem)]">
-        <div className="max-w-7xl mx-auto">
+        {/* DASHBOARD CONTENT */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 z-40 relative scrollbar-hide">
+          <div className="max-w-6xl mx-auto">
             
             {/* HERO SECTION */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
             {/* Main Weather Display */}
-            <div className="col-span-2 relative h-96 rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a]/40 backdrop-blur-xl p-10 flex flex-col justify-between overflow-hidden group animate-slideUp">
+            <div ref={heroRef} className="col-span-2 relative h-96 rounded-2xl border border-[#1a1a1a] bg-[#0a0a0a]/60 backdrop-blur-xl p-10 flex flex-col justify-between overflow-hidden group animate-slideUp">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                 
                 <div className="relative z-10 flex justify-between items-start">
@@ -159,8 +148,13 @@ export default function WeatherView() {
                         {current ? current.description : 'Loading...'}
                     </p>
                     </div>
-                    <div className="animate-pulse">
-                    <WeatherIconMain size={80} className="text-[#a0a0a0]" strokeWidth={1} />
+                    <div>
+                    <WeatherIcon 
+                      condition={current?.weather[0]?.main || 'Clear'} 
+                      timeOfDay={timeOfDay}
+                      size={80}
+                      className="text-[#a0a0a0]"
+                    />
                     </div>
                 </div>
                 <div className="relative z-10">
@@ -173,28 +167,34 @@ export default function WeatherView() {
             </div>
 
             {/* Right Panel Details */}
-            <div className="space-y-4">
-                <StatCard 
-                    icon={Wind} 
-                    label="Wind Speed" 
-                    value={current ? `${current.wind_speed} m/s` : '--'} 
-                    subtext="Direction: N/A" 
-                    delay={100} 
-                />
-                <StatCard 
-                    icon={Droplets} 
-                    label="Humidity" 
-                    value={current ? `${current.humidity}%` : '--'} 
-                    subtext={`Dew point: --`} 
-                    delay={200} 
-                />
-                <StatCard 
-                    icon={Sun} 
-                    label="UV Index" 
-                    value="--" 
-                    subtext="N/A" 
-                    delay={300} 
-                />
+            <div ref={statsRef} className="space-y-4">
+                <div data-stat-card>
+                  <StatCard 
+                      icon={Wind} 
+                      label="Wind Speed" 
+                      value={current ? `${current.wind_speed} m/s` : '--'} 
+                      subtext="Direction: N/A" 
+                      delay={100} 
+                  />
+                </div>
+                <div data-stat-card>
+                  <StatCard 
+                      icon={Droplets} 
+                      label="Humidity" 
+                      value={current ? `${current.humidity}%` : '--'} 
+                      subtext={`Dew point: --`} 
+                      delay={200} 
+                  />
+                </div>
+                <div data-stat-card>
+                  <StatCard 
+                      icon={Sun} 
+                      label="UV Index" 
+                      value="--" 
+                      subtext="N/A" 
+                      delay={300} 
+                  />
+                </div>
             </div>
             </div>
 
@@ -204,9 +204,10 @@ export default function WeatherView() {
                 <ForecastDay 
                 key={idx} 
                 day={day} 
-                icon={forecast ? getWeatherIcon(forecast.forecast[idx]?.weather[0]?.main) : Sun} 
+                icon={forecast ? forecast.forecast[idx]?.weather[0]?.main || 'Clear' : 'Clear'} 
                 temp={chartData[idx] || 0} 
                 delay={400 + (idx * 50)} 
+                timeOfDay={timeOfDay}
                 />
             ))}
             </div>
@@ -233,6 +234,7 @@ export default function WeatherView() {
                 {days.map((d, i) => <span key={i}>{d}</span>)}
             </div>
             </div>
+          </div>
         </div>
       </div>
     </div>

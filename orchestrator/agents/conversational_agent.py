@@ -27,7 +27,7 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
 from orchestrator.agents.base import AgentContext, AgentResult, BaseAgent
-from orchestrator.agents.query_analyzer import QueryAnalyzer, ToolPlan, analyze_query
+from orchestrator.agents.query_analyzer import QueryAnalyzer, ToolPlan
 from orchestrator.llm_client import LLMClient
 from orchestrator.state import OpsAgentState
 from orchestrator.tools import ALL_TOOLS
@@ -75,6 +75,11 @@ TOOL_DESCRIPTIONS = {
         "thinking": "Preparing to add this to your calendar...",
         "action": "Creating calendar event",
         "icon": "add",
+    },
+    "create_email_draft": {
+        "thinking": "Drafting the email details you asked for...",
+        "action": "Preparing email draft",
+        "icon": "mail",
     },
     "search_emails": {
         "thinking": "Searching through your emails...",
@@ -170,6 +175,17 @@ FOLLOW_UP_SUGGESTIONS = {
     "get_pending_actions": [
         SuggestedAction(text="Approve all safe", action="message", payload="Approve all low-risk actions"),
     ],
+    "create_calendar_event": [
+        SuggestedAction(text="Email the details", action="message", payload="Draft an email to share this event info"),
+        SuggestedAction(text="Add a reminder", action="message", payload="Set a 15 minute reminder for that event"),
+    ],
+    "create_email_draft": [
+        SuggestedAction(text="Send it", action="message", payload="Send that email now"),
+        SuggestedAction(text="Shorten it", action="message", payload="Rewrite that email to be shorter"),
+        SuggestedAction(
+            text="Add calendar invite", action="message", payload="Create a calendar invite for this meeting"
+        ),
+    ],
     "find_related_items": [
         SuggestedAction(text="See more connections", action="message", payload="Show me more related items"),
         SuggestedAction(text="Focus on emails", action="message", payload="Show me just the related emails"),
@@ -247,6 +263,8 @@ class ConversationalAgent(BaseAgent):
         tools: Optional[List[BaseTool]] = None,
         max_iterations: int = 5,
         use_query_analyzer: bool = True,
+        model_provider: Optional[str] = None,
+        model_name: Optional[str] = None,
     ):
         """
         Initialize the conversational agent.
@@ -256,11 +274,15 @@ class ConversationalAgent(BaseAgent):
             tools: List of tools available to the agent (default: all tools)
             max_iterations: Maximum tool call iterations to prevent infinite loops
             use_query_analyzer: Whether to use QueryAnalyzer for multi-tool planning
+            model_provider: Optional provider override ('openai' or 'nvidia')
+            model_name: Optional model name override
         """
         super().__init__(name)
         self.tools = tools or ALL_TOOLS
         self.max_iterations = max_iterations
         self.use_query_analyzer = use_query_analyzer
+        self.model_provider = model_provider
+        self.model_name = model_name
         self._llm: Optional[LLMClient] = None
         self._tool_map: Dict[str, BaseTool] = {}
         self._query_analyzer: Optional[QueryAnalyzer] = None
@@ -268,7 +290,10 @@ class ConversationalAgent(BaseAgent):
     def _init_llm(self) -> LLMClient:
         """Initialize and return the LLM client."""
         if self._llm is None:
-            self._llm = LLMClient()
+            self._llm = LLMClient(
+                provider=self.model_provider,
+                model=self.model_name,
+            )
             self._llm.bind_tools(self.tools)
             self._tool_map = {tool.name: tool for tool in self.tools}
         return self._llm
@@ -504,13 +529,10 @@ class ConversationalAgent(BaseAgent):
                         # Check if result requires approval
                         if hasattr(result, "requires_approval") and result.requires_approval:
                             if hasattr(result, "proposal_id") and result.proposal_id:
-                                pending_proposals.append(
-                                    {
-                                        "id": result.proposal_id,
-                                        "tool": tool_name,
-                                        "message": getattr(result, "message", ""),
-                                    }
-                                )
+                                # Fetch full proposal from database
+                                full_proposal = self._fetch_proposal_from_db(result.proposal_id)
+                                if full_proposal:
+                                    pending_proposals.append(full_proposal)
 
                         # Convert result to string for message
                         if hasattr(result, "model_dump"):
@@ -574,6 +596,43 @@ class ConversationalAgent(BaseAgent):
         """Calculate elapsed milliseconds."""
         return int((datetime.now() - start_time).total_seconds() * 1000)
 
+    def _fetch_proposal_from_db(self, proposal_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch full proposal details from database.
+
+        Args:
+            proposal_id: The UUID of the proposal
+
+        Returns:
+            Dictionary with full proposal data for frontend, or None if not found
+        """
+        try:
+            from backend.api.models import ActionProposal
+            from orchestrator.tools.calendar import _get_db_session
+            import uuid
+
+            db = _get_db_session()
+            try:
+                proposal = db.query(ActionProposal).filter(ActionProposal.id == uuid.UUID(proposal_id)).first()
+
+                if proposal:
+                    return {
+                        "id": str(proposal.id),
+                        "agent_name": proposal.agent_name,
+                        "action_type": proposal.action_type,
+                        "payload": proposal.payload,
+                        "status": proposal.status,
+                        "risk_level": proposal.risk_level,
+                        "explanation": proposal.explanation,
+                    }
+            finally:
+                db.close()
+
+        except Exception as e:
+            logger.error(f"Failed to fetch proposal {proposal_id}: {e}")
+
+        return None
+
     # ========================================================================
     # Streaming Interface with Visible Reasoning
     # ========================================================================
@@ -604,6 +663,16 @@ class ConversationalAgent(BaseAgent):
         Yields:
             Events with type and content
         """
+        # Initialize LLM with model from context
+        model_provider = (user_context or {}).get("model_provider") or (user_context or {}).get("modelProvider")
+        model_name = (user_context or {}).get("model_name") or (user_context or {}).get("modelName")
+
+        # Update instance variables if provided in context
+        if model_provider and not self.model_provider:
+            self.model_provider = model_provider
+        if model_name and not self.model_name:
+            self.model_name = model_name
+
         llm = self._init_llm()
 
         # Analyze the query
@@ -664,8 +733,27 @@ class ConversationalAgent(BaseAgent):
                     "step": "analyzing",
                 }
 
-            # Call LLM
-            response = await llm.ainvoke_messages(messages)
+            # Call LLM with timeout protection
+            try:
+                import asyncio
+
+                response = await asyncio.wait_for(
+                    llm.ainvoke_messages(messages), timeout=120.0  # 2 minute timeout per LLM call
+                )
+            except asyncio.TimeoutError:
+                logger.error("LLM call timed out after 120 seconds")
+                yield {
+                    "type": "error",
+                    "error": "The request took too long. Please try again with a simpler query.",
+                }
+                return
+            except Exception as e:
+                logger.error(f"LLM call failed: {e}", exc_info=True)
+                yield {
+                    "type": "error",
+                    "error": f"Failed to process request: {str(e)}",
+                }
+                return
 
             # Check for tool calls
             tool_calls = getattr(response, "tool_calls", [])
@@ -733,13 +821,10 @@ class ConversationalAgent(BaseAgent):
                         # Check for approval requirements
                         if hasattr(result, "requires_approval") and result.requires_approval:
                             if hasattr(result, "proposal_id") and result.proposal_id:
-                                pending_proposals.append(
-                                    {
-                                        "id": result.proposal_id,
-                                        "tool": tool_name,
-                                        "message": getattr(result, "message", ""),
-                                    }
-                                )
+                                # Fetch full proposal from database
+                                full_proposal = self._fetch_proposal_from_db(result.proposal_id)
+                                if full_proposal:
+                                    pending_proposals.append(full_proposal)
 
                         # Convert result
                         if hasattr(result, "model_dump"):
@@ -785,7 +870,7 @@ class ConversationalAgent(BaseAgent):
 
                         yield {
                             "type": "reasoning",
-                            "content": f"Hmm, I had trouble with that. Let me try a different approach...",
+                            "content": "Hmm, I had trouble with that. Let me try a different approach...",
                             "step": "error_recovery",
                         }
 
@@ -819,7 +904,10 @@ class ConversationalAgent(BaseAgent):
 
         yield {
             "type": "response",
-            "content": "I've analyzed several aspects of your request. Could you help me focus on what's most important to you?",
+            "content": (
+                "I've analyzed several aspects of your request. Could you help me focus "
+                "on what's most important to you?"
+            ),
             "tools_used": tools_called,
             "requires_approval": len(pending_proposals) > 0,
             "proposals": pending_proposals,
@@ -840,7 +928,7 @@ class ConversationalAgent(BaseAgent):
                 if not events:
                     return "Your calendar is clear today!"
                 elif len(events) == 1:
-                    return f"You have 1 event today"
+                    return "You have 1 event today"
                 else:
                     return f"Found {len(events)} events on your calendar today"
 

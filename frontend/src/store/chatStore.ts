@@ -24,12 +24,32 @@ export interface SuggestedAction {
   payload: string
 }
 
+export interface AgentEvent {
+  type: string
+  timestamp?: string
+  content?: string
+  step?: string
+  tool?: string
+  status?: string
+  progress_percent?: number
+  current_step?: number
+  total_steps?: number
+  percent_complete?: number
+  capabilities?: string[]
+  data_type?: string
+  count?: number
+  question?: string
+  choice?: string
+  [key: string]: any
+}
+
 export interface ChatState {
   isOpen: boolean
   messages: ChatMessage[]
   isStreaming: boolean
   currentThoughts: Thought[]
   currentReasoning: ReasoningStep[]
+  agentEvents: AgentEvent[]
   suggestedActions: SuggestedAction[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pendingApprovals: any[]
@@ -37,10 +57,15 @@ export interface ChatState {
   sessions: any[]
   currentSessionId: string | null
   selectedModel: { provider: string, name: string } | null
+  currentProgress: number
+  agentStatus: string
+  // WebSocket state (for real-time features like live collaboration)
+  wsConnected: boolean
   
   toggleChat: () => void
   setOpen: (isOpen: boolean) => void
   setModel: (provider: string, name: string) => void
+  setWsConnected: (connected: boolean) => void
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendMessage: (content: string, context?: any) => Promise<void>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,6 +75,33 @@ export interface ChatState {
   loadSessions: () => Promise<void>
   clearHistory: () => void
   sendSuggestedAction: (action: SuggestedAction) => Promise<void>
+  addAgentEvent: (event: AgentEvent) => void
+}
+
+// Load saved model from localStorage
+const loadSavedModel = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const saved = localStorage.getItem('ops-center-selected-model')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return { provider: parsed.provider, name: parsed.name }
+    }
+  } catch (e) {
+    console.error('Failed to load saved model:', e)
+  }
+  return null
+}
+
+// Save model to localStorage
+const saveModel = (provider: string, name: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('ops-center-selected-model', JSON.stringify({ provider, name }))
+    } catch (e) {
+      console.error('Failed to save model:', e)
+    }
+  }
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -58,15 +110,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   currentThoughts: [],
   currentReasoning: [],
+  agentEvents: [],
   suggestedActions: [],
   pendingApprovals: [],
   sessions: [],
   currentSessionId: null,
-  selectedModel: null,
+  selectedModel: loadSavedModel() || { provider: 'openai', name: 'gpt-5' }, // Default to GPT-5
+  currentProgress: 0,
+  agentStatus: 'idle',
+  wsConnected: false,
 
   toggleChat: () => set((state) => ({ isOpen: !state.isOpen })),
   setOpen: (isOpen) => set({ isOpen }),
-  setModel: (provider, name) => set({ selectedModel: { provider, name } }),
+  setModel: (provider, name) => {
+    saveModel(provider, name)
+    set({ selectedModel: { provider, name } })
+  },
+  setWsConnected: (connected) => set({ wsConnected: connected }),
+  addAgentEvent: (event) => set((state) => ({ 
+    agentEvents: [...state.agentEvents, { ...event, timestamp: event.timestamp || new Date().toISOString() }] 
+  })),
   
   sendMessage: async (content, context) => {
     const userMessage: ChatMessage = {
@@ -78,12 +141,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
     
     const { currentSessionId, selectedModel } = get()
     
-    set((state) => ({ 
+    set((state) => ({
         messages: [...state.messages, userMessage],
         isStreaming: true,
         currentThoughts: [],
         currentReasoning: [],
-        suggestedActions: []
+        agentEvents: [],
+        suggestedActions: [],
+        currentProgress: 0,
+        agentStatus: 'active'
     }))
 
     try {
@@ -145,6 +211,65 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         tool: event.source
                     }]
                 }))
+            } else if (event.type === 'plan') {
+                // Execution plan
+                set((state) => ({
+                    agentEvents: [...state.agentEvents, {
+                        type: 'plan',
+                        steps: event.steps,
+                        estimated_duration_ms: event.estimated_duration_ms,
+                        strategy: event.strategy,
+                        timestamp: new Date().toISOString()
+                    }]
+                }))
+            } else if (event.type === 'data') {
+                // Data retrieved
+                set((state) => ({
+                    agentEvents: [...state.agentEvents, {
+                        type: 'data',
+                        data_type: event.data_type,
+                        count: event.count,
+                        preview: event.preview,
+                        timestamp: new Date().toISOString()
+                    }]
+                }))
+            } else if (event.type === 'decision') {
+                // Agent decision point
+                set((state) => ({
+                    agentEvents: [...state.agentEvents, {
+                        type: 'decision',
+                        question: event.question,
+                        choice: event.choice,
+                        reasoning: event.reasoning,
+                        timestamp: new Date().toISOString()
+                    }]
+                }))
+            } else if (event.type === 'progress') {
+                // Progress update
+                set({
+                    currentProgress: event.percent_complete || 0,
+                    agentEvents: [...get().agentEvents, {
+                        type: 'progress',
+                        current_step: event.current_step,
+                        total_steps: event.total_steps,
+                        percent_complete: event.percent_complete,
+                        current_action: event.current_action,
+                        timestamp: new Date().toISOString()
+                    }]
+                })
+            } else if (event.type === 'agent_status') {
+                // Agent status change
+                set({
+                    agentStatus: event.status || 'active',
+                    agentEvents: [...get().agentEvents, {
+                        type: 'agent_status',
+                        status: event.status,
+                        capabilities: event.capabilities,
+                        tools: event.tools,
+                        message: event.message,
+                        timestamp: new Date().toISOString()
+                    }]
+                })
             } else if (event.type === 'suggestions') {
                 // Follow-up suggestions
                 set({ suggestedActions: event.actions || [] })
@@ -162,7 +287,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 }
                 set((state) => ({
                     messages: [...state.messages, assistantMessage],
-                    currentReasoning: [] // Clear reasoning after response
+                    currentReasoning: [], // Clear reasoning after response
+                    agentStatus: 'completed',
+                    currentProgress: 100
                 }))
             } else if (event.type === 'error') {
                  console.error(event.error)
@@ -192,34 +319,107 @@ export const useChatStore = create<ChatState>((set, get) => ({
             messages: [...state.messages, errorMessage]
         }))
     } finally {
-        set({ isStreaming: false })
+        set({
+            isStreaming: false,
+            agentStatus: 'idle',
+            currentProgress: 0
+        })
     }
   },
   
   handleApproval: async (proposalId, approved, editedPayload) => {
       // Optimistically remove from list
+      const proposal = get().pendingApprovals.find(p => p.id === proposalId)
       set((state) => ({
           pendingApprovals: state.pendingApprovals.filter(p => p.id !== proposalId)
       }))
       
+      const buildFollowUps = () => {
+          if (!proposal) return []
+          if (proposal.action_type === "create_calendar_event") {
+              const title = proposal.payload?.title || "the event"
+              return [
+                  { text: "Email attendees", action: "message", payload: `Draft an email with the agenda for "${title}"` },
+                  { text: "Add reminder", action: "message", payload: `Set a 15 minute reminder for "${title}"` },
+              ]
+          }
+          if (proposal.action_type === "create_email_draft") {
+              const subject = proposal.payload?.subject || "that email"
+              return [
+                  { text: "Send it now", action: "message", payload: "Send that email now" },
+                  { text: "Tighten it up", action: "message", payload: `Shorten "${subject}" and make it punchier` },
+              ]
+          }
+          return []
+      }
+
       // Send to API
       try {
-          await chatAPI.sendApproval(proposalId, approved)
+          const result = await chatAPI.sendApproval(proposalId, approved)
           
-          // If approved, resume workflow
+          const actionType = proposal?.action_type || "action"
+          const status = result.status
+          const executionStatus = result.execution_status
+          const followUps = status === "executed" ? buildFollowUps() : []
+
           if (approved) {
-              // Update proposal payload if edited
-              if (editedPayload) {
-                  // In a real app, we'd update the proposal in DB via API
-                  // For now, we'll just resume and let backend handle it
+              let message = result.message || "Action processed."
+
+              if (status === "executed") {
+                  if (actionType === "create_calendar_event") {
+                      message = `Event "${proposal?.payload?.title || 'event'}" has been added to your calendar!`
+                  } else if (actionType === "create_email_draft") {
+                      message = `Draft ready: "${proposal?.payload?.subject || 'email'}" is waiting for your review.`
+                  } else {
+                      message = result.message || "Action executed successfully!"
+                  }
+              } else if (status === "failed") {
+                  message = result.message ? `Action failed: ${result.message}` : "Action execution failed."
+              } else if (status) {
+                  const statusText = executionStatus ? `${status} (${executionStatus})` : status
+                  message = result.message || `Action status: ${statusText}.`
               }
               
-              // Resume workflow
-              await get().resumeWorkflow()
+              const successMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  content: message,
+                  sender: 'assistant',
+                  timestamp: new Date().toISOString(),
+                  metadata: { type: 'action_executed', action_id: proposalId, status }
+              }
+              
+              set((state) => ({
+                  messages: [...state.messages, successMessage],
+                  suggestedActions: followUps.length ? followUps : state.suggestedActions
+              }))
+          } else if (!approved) {
+              const rejectMessage: ChatMessage = {
+                  id: Date.now().toString(),
+                  content: "Action has been rejected.",
+                  sender: 'assistant',
+                  timestamp: new Date().toISOString(),
+              }
+              
+              set((state) => ({
+                  messages: [...state.messages, rejectMessage]
+              }))
           }
       } catch (e) {
           console.error("Failed to submit approval", e)
-          // Revert?
+          
+          // Show error message
+          const errorMessage: ChatMessage = {
+              id: Date.now().toString(),
+              content: `Failed to execute action: ${e instanceof Error ? e.message : 'Unknown error'}`,
+              sender: 'assistant',
+              timestamp: new Date().toISOString(),
+          }
+          
+          set((state) => ({
+              messages: [...state.messages, errorMessage],
+              // Re-add proposal if it failed
+              pendingApprovals: proposal ? [...state.pendingApprovals, proposal] : state.pendingApprovals
+          }))
       }
   },
   

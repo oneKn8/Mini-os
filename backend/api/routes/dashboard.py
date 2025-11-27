@@ -7,18 +7,14 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, and_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
 from backend.api.models import Item, ItemAgentMetadata, ActionProposal, ConnectedAccount, AgentRunLog, User
 from orchestrator.insights import (
     get_insight_engine,
-    InsightEngine,
-    Insight,
-    MorningBriefing,
     InsightCategory,
-    InsightPriority,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +32,13 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
             "items_by_importance": {},
             "items_by_category": {},
             "pending_actions": 0,
-            "agent_stats": {},
+            "agent_stats": {
+                "total_runs": 0,
+                "success_rate": 0,
+                "avg_duration_ms": 0,
+                "runs_by_agent": {},
+                "recent_runs": [],
+            },
             "connected_accounts": 0,
             "recent_sync_activity": [],
         }
@@ -45,7 +47,7 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
 
     # Total items
     try:
-        total_items = db.query(Item).filter(Item.user_id == user_id, Item.is_archived == False).count()
+        total_items = db.query(Item).filter(Item.user_id == user_id, Item.is_archived.is_(False)).count()
     except Exception:
         total_items = 0
 
@@ -53,7 +55,7 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
     try:
         items_by_provider = (
             db.query(Item.source_provider, func.count(Item.id))
-            .filter(Item.user_id == user_id, Item.is_archived == False)
+            .filter(Item.user_id == user_id, Item.is_archived.is_(False))
             .group_by(Item.source_provider)
             .all()
         )
@@ -66,7 +68,7 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
         items_by_importance = (
             db.query(ItemAgentMetadata.importance, func.count(ItemAgentMetadata.id))
             .join(Item)
-            .filter(Item.user_id == user_id, Item.is_archived == False)
+            .filter(Item.user_id == user_id, Item.is_archived.is_(False))
             .group_by(ItemAgentMetadata.importance)
             .all()
         )
@@ -79,7 +81,7 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
         items_by_category = (
             db.query(ItemAgentMetadata.category, func.count(ItemAgentMetadata.id))
             .join(Item)
-            .filter(Item.user_id == user_id, Item.is_archived == False, ItemAgentMetadata.category.isnot(None))
+            .filter(Item.user_id == user_id, Item.is_archived.is_(False), ItemAgentMetadata.category.isnot(None))
             .group_by(ItemAgentMetadata.category)
             .all()
         )
@@ -144,7 +146,7 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
                 for run in recent_runs[:10]
             ],
         }
-    except Exception as e:
+    except Exception:
         # If agent stats fail, return empty stats
         agent_stats = {
             "total_runs": 0,
@@ -362,14 +364,13 @@ async def _get_todays_events(db: Session, user_id) -> List[Dict[str, Any]]:
     """Get today's calendar events."""
     try:
         today = datetime.now().date()
-        tomorrow = today + timedelta(days=1)
 
         events = (
             db.query(Item)
             .filter(
                 Item.user_id == user_id,
                 Item.item_type == "event",
-                Item.is_archived == False,
+                Item.is_archived.is_(False),
             )
             .all()
         )
@@ -449,7 +450,7 @@ async def _get_recent_emails(db: Session, user_id, limit: int = 50) -> List[Dict
             .filter(
                 Item.user_id == user_id,
                 Item.item_type == "email",
-                Item.is_archived == False,
+                Item.is_archived.is_(False),
             )
             .order_by(Item.received_at.desc())
             .limit(limit)
@@ -481,7 +482,7 @@ async def _get_unread_count(db: Session, user_id) -> int:
             .filter(
                 Item.user_id == user_id,
                 Item.item_type == "email",
-                Item.is_archived == False,
+                Item.is_archived.is_(False),
             )
             .count()
         )
@@ -497,7 +498,7 @@ async def _get_priorities(db: Session, user_id, limit: int = 10) -> List[Dict[st
             .join(ItemAgentMetadata)
             .filter(
                 Item.user_id == user_id,
-                Item.is_archived == False,
+                Item.is_archived.is_(False),
                 ItemAgentMetadata.importance.in_(["critical", "high"]),
             )
             .order_by(

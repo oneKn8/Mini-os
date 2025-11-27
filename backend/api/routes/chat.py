@@ -17,9 +17,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
-from backend.api.models import ActionProposal, ChatMessageEntry, ChatSession, Item, User
+from backend.api.models import ActionProposal, ChatMessageEntry, ChatSession, User
 from orchestrator.agents.conversational_agent import ConversationalAgent
 from orchestrator.state import UserContext
+from orchestrator.risk_assessment import get_risk_assessor, ActionContext
+from orchestrator.preference_learner import get_preference_engine
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +51,20 @@ class SendMessageRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
     model_provider: Optional[str] = Field(default=None, alias="modelProvider")
     model_name: Optional[str] = Field(default=None, alias="modelName")
+    # Also accept in context for backward compatibility
+    modelProvider: Optional[str] = Field(default=None, exclude=True)
+    modelName: Optional[str] = Field(default=None, exclude=True)
 
-    class Config:
-        populate_by_name = True
+    model_config = {"populate_by_name": True, "protected_namespaces": ()}
+
+    def model_post_init(self, __context: Any) -> None:
+        """Extract model settings from context or direct fields."""
+        # If model settings are in context, extract them
+        if self.context:
+            if "modelProvider" in self.context and not self.model_provider:
+                self.model_provider = self.context.pop("modelProvider")
+            if "modelName" in self.context and not self.model_name:
+                self.model_name = self.context.pop("modelName")
 
 
 class SendMessageResponse(BaseModel):
@@ -221,12 +234,26 @@ class ChatService:
 
     def __init__(self):
         self._agent: Optional[ConversationalAgent] = None
+        self._agent_cache: Dict[str, ConversationalAgent] = {}  # type: ignore
 
-    def _get_agent(self) -> ConversationalAgent:
-        """Get or create the conversational agent."""
-        if self._agent is None:
-            self._agent = ConversationalAgent()
-        return self._agent
+    def _get_agent(
+        self, model_provider: Optional[str] = None, model_name: Optional[str] = None
+    ) -> ConversationalAgent:
+        """Get or create the conversational agent with optional model overrides."""
+        # Create cache key from model settings
+        cache_key = f"{model_provider or 'default'}:{model_name or 'default'}"
+
+        # Return cached agent if exists and matches
+        if cache_key in self._agent_cache:
+            return self._agent_cache[cache_key]
+
+        # Create new agent with model overrides
+        agent = ConversationalAgent(
+            model_provider=model_provider,
+            model_name=model_name,
+        )
+        self._agent_cache[cache_key] = agent
+        return agent
 
     def _get_user_context(self, db: Session) -> Dict[str, Any]:
         """Build user context from database."""
@@ -258,7 +285,11 @@ class ChatService:
         Returns:
             Tuple of (response_text, metadata)
         """
-        agent = self._get_agent()
+        # Extract model settings from context
+        model_provider = context.get("modelProvider") if context else None
+        model_name = context.get("modelName") if context else None
+
+        agent = self._get_agent(model_provider=model_provider, model_name=model_name)
         user_context = self._get_user_context(db)
 
         # Merge frontend context with user context
@@ -312,7 +343,11 @@ class ChatService:
         - suggestions: Follow-up suggestions
         - error: Something went wrong
         """
-        agent = self._get_agent()
+        # Extract model settings from context
+        model_provider = context.get("modelProvider") if context else None
+        model_name = context.get("modelName") if context else None
+
+        agent = self._get_agent(model_provider=model_provider, model_name=model_name)
         user_context = self._get_user_context(db)
 
         if context:
@@ -377,15 +412,181 @@ class ChatService:
                         "type": "suggestions",
                         "actions": event.get("actions", []),
                     }
+                elif event_type == "plan":
+                    # Execution plan
+                    yield {
+                        "type": "plan",
+                        "steps": event.get("steps", []),
+                        "estimated_duration_ms": event.get("estimated_duration_ms"),
+                        "strategy": event.get("strategy", "sequential"),
+                    }
+                elif event_type == "data":
+                    # Data retrieved
+                    yield {
+                        "type": "data",
+                        "data_type": event.get("data_type", ""),
+                        "count": event.get("count", 0),
+                        "preview": event.get("preview", []),
+                    }
+                elif event_type == "decision":
+                    # Agent decision point
+                    yield {
+                        "type": "decision",
+                        "question": event.get("question", ""),
+                        "choice": event.get("choice", ""),
+                        "reasoning": event.get("reasoning", ""),
+                    }
+                elif event_type == "progress":
+                    # Progress update
+                    yield {
+                        "type": "progress",
+                        "current_step": event.get("current_step", 0),
+                        "total_steps": event.get("total_steps", 0),
+                        "percent_complete": event.get("percent_complete", 0),
+                        "current_action": event.get("current_action", ""),
+                    }
+                elif event_type == "agent_status":
+                    # Agent status change
+                    yield {
+                        "type": "agent_status",
+                        "status": event.get("status", ""),
+                        "capabilities": event.get("capabilities", []),
+                        "tools": event.get("tools", []),
+                        "message": event.get("message"),
+                    }
                 elif event_type == "response":
-                    # Check for pending approvals
+                    # Check for pending approvals with risk assessment
                     proposals = event.get("proposals", [])
                     if proposals:
-                        yield {
-                            "type": "approval_required",
-                            "agent": "conversational",
-                            "proposals": proposals,
-                        }
+                        risk_assessor = get_risk_assessor()
+                        preference_engine = get_preference_engine()
+                        user_id = "default_user"  # TODO: Get from auth context
+
+                        assessed_proposals = []
+                        auto_approved_count = 0
+
+                        for proposal in proposals:
+                            # Get user's approval history for this action type
+                            history = risk_assessor.get_user_history(user_id, proposal["action_type"])
+
+                            # Create action context
+                            action_ctx = ActionContext(
+                                action_type=proposal["action_type"],
+                                payload=proposal["payload"],
+                                user_id=user_id,
+                                similar_approvals=history["approvals"],
+                                similar_rejections=history["rejections"],
+                            )
+
+                            # Assess risk
+                            risk_score = risk_assessor.assess(action_ctx)
+
+                            # Get personalized approval decision
+                            should_auto, confidence, reasoning = preference_engine.should_auto_approve(
+                                user_id, proposal["action_type"], risk_score.total_score
+                            )
+
+                            # Emit risk assessment event
+                            yield {
+                                "type": "risk_assessment",
+                                "action_id": proposal.get("id", ""),
+                                "action_type": proposal["action_type"],
+                                "risk_score": risk_score.total_score,
+                                "risk_breakdown": {
+                                    "reversibility": risk_score.reversibility_score,
+                                    "impact": risk_score.impact_score,
+                                    "sensitivity": risk_score.sensitivity_score,
+                                    "history": risk_score.history_score,
+                                    "time": risk_score.time_score,
+                                },
+                                "auto_approve": should_auto,
+                                "confidence": confidence,
+                                "reasoning": reasoning,
+                            }
+
+                            # Auto-approve if safe
+                            if should_auto:
+                                # Save proposal as auto-approved
+                                proposal["status"] = "auto_approved"
+                                proposal["risk_assessment"] = {
+                                    "score": risk_score.total_score,
+                                    "auto_approved": True,
+                                    "confidence": confidence,
+                                }
+
+                                # Execute immediately
+                                try:
+                                    # Create ActionProposal in database
+                                    db_proposal = ActionProposal(
+                                        id=proposal.get("id"),
+                                        user_id=user_id,
+                                        action_type=proposal["action_type"],
+                                        payload=proposal["payload"],
+                                        agent_name=proposal.get("agent_name", "conversational"),
+                                        explanation=proposal.get("explanation", ""),
+                                        risk_level="low",
+                                        status="approved",
+                                        approved_at=datetime.now(timezone.utc),
+                                    )
+                                    db.add(db_proposal)
+                                    db.commit()
+
+                                    # Execute the action
+                                    from backend.executor.action_executor import ActionExecutor
+
+                                    executor = ActionExecutor(db)
+                                    log = executor.execute(db_proposal)
+
+                                    # Record decision for learning
+                                    risk_assessor.record_decision(
+                                        user_id, proposal["action_type"], True, proposal["payload"]
+                                    )
+                                    preference_engine.record_decision(
+                                        user_id,
+                                        proposal["action_type"],
+                                        True,
+                                        proposal["payload"],
+                                        was_auto_approved=True,
+                                        risk_score=risk_score.total_score,
+                                    )
+
+                                    auto_approved_count += 1
+
+                                    # Emit auto-approval event
+                                    yield {
+                                        "type": "auto_approved",
+                                        "action_type": proposal["action_type"],
+                                        "action_id": proposal.get("id", ""),
+                                        "execution_status": log.executor_status,
+                                        "message": f"Auto-approved and executed: {proposal['action_type']}",
+                                    }
+
+                                except Exception as e:
+                                    logger.error(f"Auto-approval execution failed: {e}")
+                                    # If auto-approval fails, require manual approval
+                                    proposal["status"] = "pending"
+                                    assessed_proposals.append(proposal)
+                            else:
+                                # Requires manual approval
+                                proposal["status"] = "pending"
+                                proposal["risk_assessment"] = {
+                                    "score": risk_score.total_score,
+                                    "auto_approved": False,
+                                    "reasoning": reasoning,
+                                }
+                                assessed_proposals.append(proposal)
+
+                        # Only request approval for non-auto-approved actions
+                        if assessed_proposals:
+                            yield {
+                                "type": "approval_required",
+                                "agent": "conversational",
+                                "proposals": assessed_proposals,
+                            }
+
+                        # Update response metadata
+                        event["requires_approval"] = len(assessed_proposals) > 0
+                        event["auto_approved_count"] = auto_approved_count
 
                     yield {
                         "type": "message",
@@ -393,6 +594,7 @@ class ChatService:
                         "metadata": {
                             "tools_used": event.get("tools_used", []),
                             "requires_approval": event.get("requires_approval", False),
+                            "auto_approved_count": event.get("auto_approved_count", 0),
                         },
                     }
                 elif event_type == "error":
@@ -480,8 +682,17 @@ async def send_message(request: SendMessageRequest, db: Session = Depends(get_db
         metadata={"context": request.context} if request.context else None,
     )
 
+    # Extract model settings from request
+    model_provider = request.model_provider
+    model_name = request.model_name
+    context = request.context or {}
+    if model_provider:
+        context["modelProvider"] = model_provider
+    if model_name:
+        context["modelName"] = model_name
+
     try:
-        reply_text, metadata = await chat_service.handle_message(content, db, history, request.context)
+        reply_text, metadata = await chat_service.handle_message(content, db, history, context)
     except ChatServiceError as exc:
         logger.error("Chat service failed: %s", exc)
         reply_text = str(exc) or "I ran into a problem processing that request."
@@ -530,12 +741,12 @@ async def stream_chat(request: SendMessageRequest, db: Session = Depends(get_db)
         metadata={"context": request.context} if request.context else None,
     )
 
-    # Build context
+    # Build context with model settings
     ctx = request.context or {}
     if request.model_provider:
-        ctx["model_provider"] = request.model_provider
+        ctx["modelProvider"] = request.model_provider
     if request.model_name:
-        ctx["model_name"] = request.model_name
+        ctx["modelName"] = request.model_name
 
     async def event_generator():
         full_response_text = ""
@@ -649,21 +860,115 @@ async def delete_session(session_id: str, db: Session = Depends(get_db)):
 
 @router.post("/action/{action_id}/approve")
 async def approve_action(action_id: str, request: Dict[str, bool], db: Session = Depends(get_db)):
-    """Handle user approval/rejection of an action."""
+    """Handle user approval/rejection of an action and execute if approved."""
     approved = request.get("approved", False)
+
+    logger.info(f"Approval request for action {action_id}: approved={approved}")
 
     proposal = db.query(ActionProposal).filter(ActionProposal.id == action_id).first()
     if not proposal:
+        logger.error(f"Action proposal {action_id} not found")
         raise HTTPException(status_code=404, detail="Action proposal not found")
 
     if proposal.status != "pending":
-        return {"message": f"Action already {proposal.status}"}
+        logger.warning(f"Action {action_id} already {proposal.status}")
+        return {"message": f"Action already {proposal.status}", "status": proposal.status}
 
-    proposal.status = "approved" if approved else "rejected"
-    proposal.approved_at = datetime.now(timezone.utc) if approved else None
-    db.commit()
+    # Get risk assessor and preference engine for learning
+    risk_assessor = get_risk_assessor()
+    preference_engine = get_preference_engine()
+    user_id = proposal.user_id or "default_user"
 
-    return {"status": proposal.status, "action_id": action_id}
+    if approved:
+        # Mark as approved
+        proposal.status = "approved"
+        proposal.approved_at = datetime.now(timezone.utc)
+        db.commit()
+        logger.info(f"Action {action_id} marked as approved, executing...")
+
+        # Execute the action
+        try:
+            from backend.executor.action_executor import ActionExecutor
+            from backend.api.models import PreferenceSignal
+
+            executor = ActionExecutor(db)
+            logger.info(f"Executing action {action_id} of type {proposal.action_type}")
+            log = executor.execute(proposal)
+            logger.info(f"Action {action_id} executed successfully: {log.executor_status}")
+
+            # Record decision for learning (manual approval)
+            risk_assessor.record_decision(user_id, proposal.action_type, True, proposal.payload)
+            preference_engine.record_decision(
+                user_id,
+                proposal.action_type,
+                True,
+                proposal.payload,
+                was_auto_approved=False,
+                risk_score=None,  # Not available for manual approvals
+            )
+
+            # Create preference signal
+            signal = PreferenceSignal(
+                user_id=proposal.user_id,
+                signal_type="approve_proposal",
+                related_item_id=proposal.related_item_id,
+                metadata={"action_id": str(action_id)},
+            )
+            db.add(signal)
+            db.commit()
+
+            # Build success message
+            message = f"Action executed successfully: {proposal.action_type}"
+            if proposal.action_type == "create_calendar_event":
+                event_title = proposal.payload.get("title", "event")
+                message = f"Event '{event_title}' has been added to your calendar!"
+
+            return {
+                "status": "executed",
+                "action_id": action_id,
+                "execution_status": log.executor_status,
+                "message": message,
+            }
+        except Exception as e:
+            logger.error(f"Failed to execute action {action_id}: {e}", exc_info=True)
+            proposal.status = "failed"
+            db.commit()
+            return {
+                "status": "failed",
+                "action_id": action_id,
+                "error": str(e),
+                "message": f"Action execution failed: {str(e)}",
+            }
+    else:
+        # Reject the action
+        proposal.status = "rejected"
+        proposal.approved_at = None
+        db.commit()
+
+        # Record rejection for learning
+        risk_assessor.record_decision(user_id, proposal.action_type, False, proposal.payload)
+        preference_engine.record_decision(
+            user_id,
+            proposal.action_type,
+            False,
+            proposal.payload,
+            was_auto_approved=False,
+            risk_score=None,
+        )
+
+        # Create preference signal for rejection
+        from backend.api.models import PreferenceSignal
+
+        signal = PreferenceSignal(
+            user_id=proposal.user_id,
+            signal_type="reject_proposal",
+            related_item_id=proposal.related_item_id,
+            metadata={"action_id": str(action_id)},
+        )
+        db.add(signal)
+        db.commit()
+
+        return {"status": "rejected", "action_id": action_id, "message": "Action rejected"}
 
 
 @router.post("/resume")

@@ -3,16 +3,16 @@
 
 @theme {
   /* Beast Mode Dark Theme Color Palette */
-  --color-bg-primary: #000000;
-  --color-bg-secondary: #050505; /* Slightly lighter black for subtle separation */
-  --color-bg-tertiary: #0a0a0a;
+  --color-bg-primary: #060606;
+  --color-bg-secondary: #0a0a0a; /* Subtle separation without blue cast */
+  --color-bg-tertiary: #111111;
 
-  --color-surface: rgba(10, 10, 10, 0.8); /* Slightly transparent for glass effect */
-  --color-surface-hover: rgba(20, 20, 20, 0.9);
+  --color-surface: rgba(18, 18, 18, 0.92); /* Slightly lifted from background */
+  --color-surface-hover: rgba(26, 26, 26, 0.96);
 
-  --color-border-light: rgba(255, 255, 255, 0.08);
-  --color-border-medium: rgba(255, 255, 255, 0.12);
-  --color-border-dark: rgba(255, 255, 255, 0.18);
+  --color-border-light: rgba(255, 255, 255, 0.12);
+  --color-border-medium: rgba(255, 255, 255, 0.18);
+  --color-border-dark: rgba(255, 255, 255, 0.24);
 
   --color-text-primary: #faf9f6;
   --color-text-secondary: #a0a0a0;
@@ -47,8 +47,9 @@
   body {
     @apply bg-bg-primary text-text-primary font-sans antialiased overflow-hidden;
     background-image: 
-      radial-gradient(circle at 50% 0%, rgba(76, 110, 245, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(121, 80, 242, 0.02) 0%, transparent 40%);
+      radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
+      radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.025) 0%, transparent 45%),
+      radial-gradient(circle at 20% 60%, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
   }
   
   /* Smooth transitions */
@@ -100,6 +101,23 @@
   
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Force main content to sit above any stray overlays */
+  .app-main {
+    isolation: isolate;
+    background: var(--color-bg-primary);
+    position: relative;
+    z-index: 50;
+  }
+  .app-main * {
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  /* Hide React Query Devtools overlay entirely */
+  .tsqd-parent-container {
+    display: none !important;
   }
 }
 

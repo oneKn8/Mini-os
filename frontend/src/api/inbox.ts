@@ -1,3 +1,4 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 
 const api = axios.create({
@@ -17,8 +18,45 @@ export interface InboxItem {
   suggested_action?: string
 }
 
-export async function fetchInboxItems(filter: string): Promise<InboxItem[]> {
-  const response = await api.get('/inbox', { params: { filter } })
+export async function fetchInboxItems(filter?: string): Promise<InboxItem[]> {
+  const response = await api.get('/inbox', { params: filter ? { filter } : {} })
   return response.data
+}
+
+export async function fetchInboxItem(itemId: string): Promise<InboxItem & { body_full?: string; labels?: string[] }> {
+  const response = await api.get(`/inbox/${itemId}`)
+  return response.data
+}
+
+// React Query hooks
+export function useInbox(filter?: string) {
+  return useQuery({
+    queryKey: ['inbox', filter],
+    queryFn: () => fetchInboxItems(filter),
+    refetchInterval: 30000, // Refetch every 30 seconds
+  })
+}
+
+export function useInboxItem(itemId: string | null) {
+  return useQuery({
+    queryKey: ['inbox', itemId],
+    queryFn: () => fetchInboxItem(itemId!),
+    enabled: !!itemId,
+  })
+}
+
+export function useRefreshInbox() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/sync/refresh-inbox')
+      return response.data
+    },
+    onSuccess: () => {
+      // Invalidate and refetch inbox queries
+      queryClient.invalidateQueries({ queryKey: ['inbox'] })
+    },
+  })
 }
 

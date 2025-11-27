@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from 'framer-motion'
 import { MessageCircle, X } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
 import ChatWindow from './ChatWindow'
@@ -8,49 +7,18 @@ export default function ChatWidget() {
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end font-sans">
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="mb-4 h-[600px] w-[400px] overflow-hidden rounded-2xl bg-surface border border-border-medium shadow-2xl"
-          >
-            <ChatWindow />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isOpen && (
+        <div className="mb-3 h-[600px] w-[400px] overflow-hidden rounded-xl bg-zinc-950 border border-zinc-800 shadow-2xl">
+          <ChatWindow />
+        </div>
+      )}
 
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+      <button
         onClick={toggleChat}
-        className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary text-white shadow-lg hover:bg-accent-primary-hover transition-colors"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 text-zinc-300 shadow-lg hover:bg-zinc-700 hover:text-zinc-100 transition-colors border border-zinc-700"
       >
-        <AnimatePresence mode="wait">
-          {isOpen ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-            >
-              <X size={24} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-            >
-              <MessageCircle size={24} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
+        {isOpen ? <X size={20} /> : <MessageCircle size={20} />}
+      </button>
     </div>
   )
 }
-

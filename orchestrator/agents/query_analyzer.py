@@ -94,6 +94,10 @@ TOOL_GRAPH = {
         required_before=["get_todays_events", "get_upcoming_events"],
         priority=3,
     ),
+    "create_email_draft": ToolDependency(
+        tool_name="create_email_draft",
+        priority=3,
+    ),
     # Weather tools
     "get_current_weather": ToolDependency(
         tool_name="get_current_weather",
@@ -179,7 +183,7 @@ QUERY_PATTERNS = {
         "synthesis": "Check weather and calendar for outdoor activity planning",
     },
     "person_context": {
-        "patterns": ["about", "from", "involving", "interaction with", "history with"],
+        "patterns": ["from ", "involving", "interaction with", "history with", "meeting with", "call with"],
         "tools": ["get_person_context", "search_emails", "get_upcoming_events"],
         "synthesis": "Gather all context about a person including emails and meetings",
     },
@@ -188,6 +192,20 @@ QUERY_PATTERNS = {
         "tools": ["find_related_items", "search_emails", "query_knowledge_base"],
         "synthesis": "Find connections across emails, events, and knowledge base",
     },
+}
+
+# Friendlier reasoning strings for pattern matches
+PATTERN_REASONING = {
+    "day_overview": "I'll combine your schedule, weather, and priorities for a quick overview.",
+    "tomorrow_prep": "I'll preview tomorrow's events, weather, and any related emails.",
+    "week_overview": "I'll summarize your upcoming week with key events, weather, and priorities.",
+    "meeting_prep": "I'll gather emails and calendar context so you're ready for the meeting.",
+    "availability": "I'll check your calendar to see when you're free.",
+    "focus_planning": "I'll look at priorities and your calendar to suggest what to tackle first.",
+    "inbox_overview": "I'll summarize what's in your inbox.",
+    "outdoor_planning": "I'll check weather and calendar to help plan outdoor time.",
+    "person_context": "You mentioned someone specific, so I'll pull related emails and meetings.",
+    "related_search": "I'll look across emails, events, and notes for connected items.",
 }
 
 
@@ -235,13 +253,22 @@ class QueryAnalyzer:
         """
         query_lower = query.lower()
 
+        # Explicitly catch email composition to avoid calendar misfires
+        if self._is_email_compose(query_lower):
+            return ToolPlan(
+                tools=["create_email_draft"],
+                parallel_groups=[],
+                reasoning="Sounds like you want to send an email. I'll draft it and keep it for your approval.",
+                expected_synthesis="Draft the email using the details you provided.",
+            )
+
         # First try pattern matching for known multi-tool queries
         for pattern_name, pattern_config in QUERY_PATTERNS.items():
             if any(p in query_lower for p in pattern_config["patterns"]):
                 return ToolPlan(
                     tools=pattern_config["tools"],
                     parallel_groups=self._find_parallel_groups(pattern_config["tools"]),
-                    reasoning=f"Matched pattern '{pattern_name}' - combining multiple data sources",
+                    reasoning=self._get_pattern_reasoning(pattern_name, pattern_config),
                     expected_synthesis=pattern_config["synthesis"],
                 )
 
@@ -273,6 +300,12 @@ class QueryAnalyzer:
             reasoning="Query doesn't match known patterns - LLM will decide tools dynamically",
             expected_synthesis="Respond based on conversation context",
         )
+
+    def _get_pattern_reasoning(self, pattern_name: str, pattern_config: Dict[str, Any]) -> str:
+        """Return a friendly reasoning string for a matched pattern."""
+        if pattern_name in PATTERN_REASONING:
+            return PATTERN_REASONING[pattern_name]
+        return f"I'll combine {', '.join(pattern_config.get('tools', []))} to answer that."
 
     def _extract_entities(self, query: str) -> Dict[str, Any]:
         """Extract entities from the query."""
@@ -309,9 +342,26 @@ class QueryAnalyzer:
 
         return entities
 
+    def _is_email_compose(self, query_lower: str) -> bool:
+        """Detect if the user wants to write/send an email."""
+        compose_verbs = ["write", "draft", "compose", "send", "shoot", "reach out", "reply", "respond"]
+        mentions_email = any(w in query_lower for w in ["email", "mail", "message"])
+        has_recipient_hint = "@" in query_lower or " to " in query_lower
+        exclusions = ["inbox", "summary", "summarize", "check", "search"]
+
+        if any(ex in query_lower for ex in exclusions):
+            return False
+
+        return (mentions_email or has_recipient_hint) and any(v in query_lower for v in compose_verbs)
+
     def _identify_tools_from_query(self, query_lower: str, entities: Dict[str, Any]) -> Set[str]:
         """Identify which tools are needed based on query content."""
         tools = set()
+
+        # Email composition takes precedence over other calendar heuristics
+        if self._is_email_compose(query_lower):
+            tools.add("create_email_draft")
+            return tools
 
         # Calendar triggers
         if any(w in query_lower for w in ["calendar", "schedule", "meeting", "event", "busy", "free"]):

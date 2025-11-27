@@ -27,10 +27,21 @@ export interface DashboardStats {
   }>
 }
 
+import { useQuery } from '@tanstack/react-query'
+
 export async function fetchDashboardStats(): Promise<DashboardStats> {
   const response = await fetch('/api/dashboard/stats')
   if (!response.ok) {
     throw new Error('Failed to fetch dashboard stats')
   }
   return response.json()
+}
+
+// React Query hooks
+export function useDashboardStats() {
+  return useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: fetchDashboardStats,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  })
 }

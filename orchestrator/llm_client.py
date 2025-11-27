@@ -7,17 +7,20 @@ Enhanced with:
 - Conversation history management
 - Async support
 - Streaming support
+- Universal model support via capability registry
 """
 
 import json
 import logging
 import os
-from typing import Any, AsyncIterator, Dict, List, Optional, Type, Union
+from typing import AsyncIterator, Dict, List, Optional, Type
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
+
+from orchestrator.llm_capabilities import ModelCapabilityDetector, ModelCapabilities
 
 logger = logging.getLogger(__name__)
 
@@ -74,36 +77,64 @@ class LLMClient:
         self.default_max_tokens = max_tokens
         self._tools: List[BaseTool] = []
         self._conversation_history: List[BaseMessage] = []
+        self._model_name: Optional[str] = model or os.getenv(
+            "OPENAI_MODEL" if self.provider == "openai" else "NVIDIA_MODEL", None
+        )
+
+        self.capabilities: ModelCapabilities = ModelCapabilityDetector.get_capabilities(self._model_name or "")
 
         self.llm = self._create_llm(model)
 
     def _create_llm(self, model: Optional[str] = None) -> BaseChatModel:
-        """Create the underlying LLM instance."""
+        """Create the underlying LLM instance using capability-based configuration."""
         if self.provider == "nvidia":
             if not NVIDIA_AVAILABLE:
                 raise RuntimeError("langchain-nvidia-ai-endpoints is required for NVIDIA provider")
             api_key = os.getenv("NVIDIA_API_KEY")
             if not api_key:
                 raise ValueError("NVIDIA_API_KEY not found")
+
+            model_name = model or os.getenv("NVIDIA_MODEL", "meta/llama-3.1-70b-instruct")
+            self._model_name = model_name
+            self.capabilities = ModelCapabilityDetector.get_capabilities(model_name)
+
+            temperature = self.capabilities.validate_temperature(self.default_temperature)
+
             return ChatNVIDIA(
-                model=model or os.getenv("NVIDIA_MODEL", "meta/llama-3.1-70b-instruct"),
+                model=model_name,
                 nvidia_api_key=api_key,
-                temperature=self.default_temperature,
+                temperature=temperature,
                 max_tokens=self.default_max_tokens,
             )
+
         elif self.provider == "openai":
             if not OPENAI_AVAILABLE:
                 raise RuntimeError("langchain-openai is required for OpenAI provider")
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 raise ValueError("OPENAI_API_KEY not found")
-            model_name = model or os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-            return ChatOpenAI(
-                model=model_name,
-                openai_api_key=api_key,
-                temperature=self.default_temperature,
-                max_tokens=self.default_max_tokens,
-            )
+
+            model_name = model or os.getenv("OPENAI_MODEL", "gpt-5")
+            self._model_name = model_name
+            self.capabilities = ModelCapabilityDetector.get_capabilities(model_name)
+
+            temperature = self.capabilities.validate_temperature(self.default_temperature)
+            max_tokens_param = self.capabilities.get_max_tokens_param_name()
+
+            if max_tokens_param == "max_completion_tokens":
+                return ChatOpenAI(
+                    model=model_name,
+                    openai_api_key=api_key,
+                    temperature=temperature,
+                    model_kwargs={"max_completion_tokens": self.default_max_tokens},
+                )
+            else:
+                return ChatOpenAI(
+                    model=model_name,
+                    openai_api_key=api_key,
+                    temperature=temperature,
+                    max_tokens=self.default_max_tokens,
+                )
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -223,8 +254,12 @@ class LLMClient:
         messages = self._build_messages(message, system_prompt, use_history)
 
         if temperature and temperature != self.default_temperature:
-            # Create new LLM with different temperature for this call
-            llm = self.llm.bind(temperature=temperature) if hasattr(self.llm, "bind") else self.llm
+            validated_temp = self.capabilities.validate_temperature(temperature)
+
+            if validated_temp != self.default_temperature and self.capabilities.supports_temperature:
+                llm = self.llm.bind(temperature=validated_temp) if hasattr(self.llm, "bind") else self.llm
+            else:
+                llm = self.llm
         else:
             llm = self.llm
 
@@ -402,6 +437,10 @@ class LLMClient:
     def get_underlying_llm(self) -> BaseChatModel:
         """Get the underlying LangChain LLM instance."""
         return self.llm
+
+    def get_capabilities(self) -> ModelCapabilities:
+        """Get the model capabilities."""
+        return self.capabilities
 
     def __repr__(self):
         return f"LLMClient(provider={self.provider}, model={self.get_model_name()}, tools={len(self._tools)})"

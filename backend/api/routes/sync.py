@@ -5,11 +5,12 @@ Sync API routes for triggering data synchronization from external providers.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
 from backend.api.models import User, ConnectedAccount
+from backend.api.sse import emit_inbox_update, emit_calendar_update
 from backend.ingestion.sync_service import SyncService
 
 logger = logging.getLogger(__name__)
@@ -119,10 +120,28 @@ async def refresh_inbox(db: Session = Depends(get_db)):
                 count = sync_service.sync_gmail(account)
                 results["gmail"] = count
                 total_synced += count
+                # Emit inbox update
+                if count > 0:
+                    await emit_inbox_update(
+                        "items_synced",
+                        {
+                            "provider": "gmail",
+                            "count": count,
+                        },
+                    )
             elif account.provider == "outlook":
                 count = sync_service.sync_outlook(account)
                 results["outlook"] = count
                 total_synced += count
+                # Emit inbox update
+                if count > 0:
+                    await emit_inbox_update(
+                        "items_synced",
+                        {
+                            "provider": "outlook",
+                            "count": count,
+                        },
+                    )
         except Exception as e:
             logger.error(f"Sync failed for {account.provider}: {e}")
             results[account.provider] = f"Error: {str(e)}"
@@ -167,6 +186,14 @@ async def refresh_calendar(db: Session = Depends(get_db)):
 
     try:
         count = sync_service.sync_calendar(account)
+        # Emit calendar update
+        if count > 0:
+            await emit_calendar_update(
+                "events_synced",
+                {
+                    "count": count,
+                },
+            )
         return {
             "status": "completed",
             "synced_items": count,

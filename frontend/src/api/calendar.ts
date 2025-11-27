@@ -24,6 +24,8 @@ export interface UpdateEventPayload {
   location?: string
 }
 
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
 export async function fetchEvents(startDate?: Date, endDate?: Date): Promise<CalendarEvent[]> {
   const params = new URLSearchParams()
   if (startDate) params.append('start_date', startDate.toISOString())
@@ -67,4 +69,64 @@ export async function deleteEvent(eventId: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete event')
   }
+}
+
+// React Query hooks
+export function useCalendarEvents(startDate?: Date, endDate?: Date) {
+  return useQuery({
+    queryKey: ['calendar', 'events', startDate?.toISOString(), endDate?.toISOString()],
+    queryFn: () => fetchEvents(startDate, endDate),
+    refetchInterval: 60000, // Refetch every minute
+  })
+}
+
+export function useCreateEvent() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (event: CreateEventPayload) => createEvent(event),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    },
+  })
+}
+
+export function useUpdateEvent() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: ({ eventId, updates }: { eventId: string; updates: UpdateEventPayload }) =>
+      updateEvent(eventId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    },
+  })
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (eventId: string) => deleteEvent(eventId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    },
+  })
+}
+
+export function useRefreshCalendar() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async () => {
+      const response = await fetch('/api/sync/refresh-calendar', { method: 'POST' })
+      if (!response.ok) {
+        throw new Error('Failed to refresh calendar')
+      }
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+    },
+  })
 }

@@ -86,22 +86,94 @@ class ActionExecutor:
         return result
 
     def _create_calendar_event(self, proposal: ActionProposal) -> Dict:
-        """Create a calendar event."""
+        """Create a calendar event and save it to the database."""
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        from backend.api.models import Item, ConnectedAccount
+        import uuid
+
         payload = proposal.payload
-        client = self._get_calendar_client(proposal.user_id)
+        logger.info(f"Creating calendar event: {payload.get('title')} at {payload.get('start')}")
+
+        try:
+            client = self._get_calendar_client(proposal.user_id)
+        except Exception as e:
+            logger.error(f"Failed to get calendar client: {e}", exc_info=True)
+            raise ValueError(f"Failed to connect to calendar: {str(e)}")
 
         from datetime import datetime
 
-        start = datetime.fromisoformat(payload["start"])
-        end = datetime.fromisoformat(payload["end"])
+        try:
+            start = datetime.fromisoformat(payload["start"])
+            end = datetime.fromisoformat(payload["end"])
+        except Exception as e:
+            logger.error(f"Failed to parse datetime: {e}")
+            raise ValueError(f"Invalid datetime format: {str(e)}")
 
-        result = client.create_event(
-            title=payload["title"],
-            start=start,
-            end=end,
-            description=payload.get("description", ""),
-            location=payload.get("location", ""),
-        )
+        # Create event in Google Calendar
+        try:
+            result = client.create_event(
+                title=payload["title"],
+                start=start,
+                end=end,
+                description=payload.get("description", ""),
+                location=payload.get("location", ""),
+            )
+            logger.info(f"Event created in Google Calendar: {result.get('event_id')}")
+        except Exception as e:
+            logger.error(f"Failed to create event in Google Calendar: {e}", exc_info=True)
+            raise ValueError(f"Failed to create event in calendar: {str(e)}")
+
+        # Save event to database so it appears immediately
+        try:
+            # Get the calendar account
+            account = (
+                self.db.query(ConnectedAccount)
+                .filter(
+                    ConnectedAccount.user_id == proposal.user_id,
+                    ConnectedAccount.provider == "google_calendar",
+                    ConnectedAccount.status == "active",
+                )
+                .first()
+            )
+
+            if account:
+                # Create Item record for the event
+                event_item = Item(
+                    id=uuid.uuid4(),
+                    user_id=proposal.user_id,
+                    source_type="event",
+                    source_provider="google_calendar",
+                    source_account_id=account.id,
+                    source_id=result["event_id"],
+                    title=payload["title"],
+                    body_preview=payload.get("description", "")[:500] if payload.get("description") else "",
+                    body_full=payload.get("description", ""),
+                    sender=account.provider_email or "",
+                    start_datetime=start,
+                    end_datetime=end,
+                    received_datetime=datetime.utcnow(),
+                    raw_metadata={
+                        "google_calendar": {
+                            "event_id": result["event_id"],
+                            "status": "confirmed",
+                            "location": payload.get("location", ""),
+                            "html_link": result.get("html_link", ""),
+                        }
+                    },
+                )
+                self.db.add(event_item)
+                self.db.commit()
+
+                logger.info(f"Created calendar event {result['event_id']} and saved to database")
+            else:
+                logger.warning(f"No active calendar account found for user {proposal.user_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to save event to database: {e}", exc_info=True)
+            # Don't fail the whole operation if DB save fails - event is still created in Google Calendar
 
         return result
 
