@@ -14,10 +14,17 @@ import {
     Cloud,
     ChevronLeft,
     ChevronRight,
-    MessageSquare
+    MessageSquare,
+    Square
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import ChatWindow from './Chat/ChatWindow'
+import { AgentCursor } from './AgentCursor'
+import { ThoughtBubble } from './ThoughtBubble'
+import { ConfettiCelebration } from './ConfettiCelebration'
+import { ToastContainer } from './Toast'
+import { useScreenController } from '../store/screenController'
+import { useChatStore } from '../store/chatStore'
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: BarChart3 },
@@ -293,16 +300,94 @@ function useNavigationListener() {
                 navigate(event.detail)
             }
         }
+        
+        // Handle both chat-navigate and agent-navigate events
+        const handleAgentNavigation = (event: CustomEvent<{ page: string; focus?: string }>) => {
+            if (event.detail?.page) {
+                navigate(event.detail.page)
+            }
+        }
+        
         window.addEventListener('chat-navigate', handleNavigation as EventListener)
+        window.addEventListener('agent-navigate', handleAgentNavigation as EventListener)
         return () => {
             window.removeEventListener('chat-navigate', handleNavigation as EventListener)
+            window.removeEventListener('agent-navigate', handleAgentNavigation as EventListener)
         }
     }, [navigate])
 }
 
+// Keyboard Shortcuts Hook
+function useKeyboardShortcuts() {
+    const { stopAgent, agentActive, canUndo, undo } = useScreenController()
+    const { pendingApprovals, handleApproval } = useChatStore()
+    
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Escape - Stop agent
+            if (e.key === 'Escape' && agentActive) {
+                e.preventDefault()
+                stopAgent()
+            }
+            
+            // Enter - Approve first pending action
+            if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && pendingApprovals.length > 0) {
+                // Only if not typing in an input
+                if (document.activeElement?.tagName !== 'INPUT' && 
+                    document.activeElement?.tagName !== 'TEXTAREA') {
+                    e.preventDefault()
+                    handleApproval(pendingApprovals[0].id, true)
+                }
+            }
+            
+            // Ctrl+Z - Undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey && canUndo) {
+                e.preventDefault()
+                undo()
+            }
+        }
+        
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [agentActive, pendingApprovals, canUndo, stopAgent, handleApproval, undo])
+}
+
 function LayoutWithNavigation() {
   useNavigationListener()
-  return <Layout />
+  useKeyboardShortcuts()
+  const { agentActive, stopAgent } = useScreenController()
+  
+  return (
+    <>
+      <Layout />
+      
+      {/* Agent Visual Components */}
+      <AgentCursor />
+      <ThoughtBubble />
+      <ConfettiCelebration />
+      <ToastContainer />
+      
+      {/* Agent Stop Button - shows when agent is working */}
+      <AnimatePresence>
+        {agentActive && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            onClick={stopAgent}
+            className="fixed top-4 right-4 z-[9999] flex items-center gap-2 px-3 py-2 
+                       bg-zinc-900/90 backdrop-blur-sm border border-zinc-800/50 
+                       rounded-lg text-zinc-300 hover:text-white hover:border-zinc-700 
+                       transition-colors shadow-lg"
+          >
+            <Square size={14} className="text-red-400" />
+            <span className="text-xs font-medium">Stop Agent</span>
+            <kbd className="ml-1 text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded">Esc</kbd>
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </>
+  )
 }
 
 export default LayoutWithNavigation

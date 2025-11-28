@@ -40,7 +40,7 @@ export default function CalendarGrid({
 
         return (
           <div key={i} className="relative min-h-[600px] p-2 space-y-2">
-            {dayEvents.map((event, eventIndex) => {
+            {dayEvents.map((event) => {
               const eventStart = new Date(event.start)
               const eventEnd = new Date(event.end)
               const startHour = eventStart.getHours()

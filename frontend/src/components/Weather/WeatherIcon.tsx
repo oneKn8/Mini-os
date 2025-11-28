@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Cloud, Sun, Wind, Droplets, CloudRain, CloudLightning, Snowflake, Moon } from 'lucide-react'
+import { Cloud, Sun, CloudRain, CloudLightning, Snowflake, Moon } from 'lucide-react'
 import { gsap } from '../../utils/gsap'
 
 interface WeatherIconProps {

@@ -1,31 +1,28 @@
 import { useChatStore } from '../../store/chatStore'
-import { Circle, Loader2 } from 'lucide-react'
 
 export default function WorkflowVisualization() {
-  const { isStreaming, currentReasoning } = useChatStore()
+  const { currentReasoning } = useChatStore()
 
-  // Only show during streaming with reasoning steps
-  if (!isStreaming || currentReasoning.length === 0) return null
+  if (currentReasoning.length === 0) return null
+
+  // Get last 5 reasoning steps
+  const recentSteps = currentReasoning.slice(-5)
 
   return (
-    <div className="space-y-1 text-xs text-zinc-500">
-      {currentReasoning.slice(-5).map((step, idx) => {
-        const isLast = idx === currentReasoning.length - 1 && isStreaming
-        
-        return (
-          <div key={idx} className="flex items-center gap-2">
-            {isLast ? (
-              <Loader2 size={10} className="animate-spin text-zinc-600" />
+    <div className="space-y-1.5 text-sm mt-2">
+      {recentSteps.map((step, idx) => (
+        <div key={idx} className="flex items-center gap-2 animate-fadeIn">
+          <div className="w-1.5 h-1.5 rounded-full bg-blue-500/70" />
+          <span className="text-zinc-300">
+            {step.tool ? (
+              <span className="text-blue-400">{step.tool}</span>
             ) : (
-              <Circle size={10} className="text-zinc-700" />
+              step.content?.slice(0, 80)
             )}
-            <span className={isLast ? 'text-zinc-400' : ''}>
-              {step.tool ? `Using ${step.tool}` : step.content?.slice(0, 60)}
-              {step.content && step.content.length > 60 ? '...' : ''}
-            </span>
-          </div>
-        )
-      })}
+            {step.content && step.content.length > 80 ? '...' : ''}
+          </span>
+        </div>
+      ))}
     </div>
   )
 }

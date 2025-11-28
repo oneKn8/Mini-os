@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { chatAPI } from '../api/chat'
 import type { ChatMessage } from '../types/chat'
+import { useScreenController } from './screenController'
+import { toast } from '../components/Toast'
+import { triggerConfetti } from '../components/ConfettiCelebration'
+import { useSettingsStore } from './settingsStore'
 
 export interface Thought {
   agent: string
@@ -69,7 +73,7 @@ export interface ChatState {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sendMessage: (content: string, context?: any) => Promise<void>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleApproval: (proposalId: string, approved: boolean, editedPayload?: any) => Promise<void>
+  handleApproval: (proposalId: string, approved: boolean, editedPayload?: any, skipFuture?: boolean) => Promise<void>
   resumeWorkflow: () => Promise<void>
   loadHistory: (sessionId?: string) => Promise<void>
   loadSessions: () => Promise<void>
@@ -168,6 +172,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const stream = chatAPI.streamMessage(requestPayload)
         
         for await (const event of stream) {
+            console.log('[ChatStore] Event received:', event.type, event)
             if (event.type === 'session_id') {
                 set({ currentSessionId: event.session_id })
             } else if (event.type === 'reasoning') {
@@ -270,6 +275,37 @@ export const useChatStore = create<ChatState>((set, get) => ({
                         timestamp: new Date().toISOString()
                     }]
                 })
+            } else if (event.type === 'screen_control') {
+                // Screen control events from agent
+                const sc = useScreenController.getState()
+                if (event.action === 'focus' || event.action === 'take') {
+                    sc.takeControl()
+                    if (event.page) sc.navigateTo(event.page, event.focus)
+                    if (event.cursor) sc.moveCursor(event.cursor)
+                    if (event.state) sc.setAgentState(event.state)
+                } else if (event.action === 'release') {
+                    sc.releaseControl()
+                }
+                if (event.state && event.action !== 'release') {
+                    sc.setAgentState(event.state)
+                }
+            } else if (event.type === 'thought') {
+                // Thought bubble for screen controller
+                const sc = useScreenController.getState()
+                sc.showThought(event.content, event.cursor)
+            } else if (event.type === 'preview') {
+                // Preview for ghost elements on pages
+                const sc = useScreenController.getState()
+                sc.addPreview({
+                    id: `preview-${Date.now()}`,
+                    type: event.preview_type,
+                    page: event.page,
+                    data: event.data,
+                    cursor: event.cursor,
+                })
+            } else if (event.type === 'auto_approved') {
+                // Action was auto-approved and executed
+                toast.success(`Auto-approved: ${event.action_type.replace(/_/g, ' ')}`)
             } else if (event.type === 'suggestions') {
                 // Follow-up suggestions
                 set({ suggestedActions: event.actions || [] })
@@ -288,6 +324,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 set((state) => ({
                     messages: [...state.messages, assistantMessage],
                     currentReasoning: [], // Clear reasoning after response
+                    isStreaming: false,   // Stop showing processing UI
                     agentStatus: 'completed',
                     currentProgress: 100
                 }))
@@ -327,12 +364,31 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
   
-  handleApproval: async (proposalId, approved, editedPayload) => {
+  handleApproval: async (proposalId, approved, _editedPayload, skipFuture = false) => {
       // Optimistically remove from list
       const proposal = get().pendingApprovals.find(p => p.id === proposalId)
       set((state) => ({
           pendingApprovals: state.pendingApprovals.filter(p => p.id !== proposalId)
       }))
+      
+      // Handle "don't ask again" option
+      if (approved && skipFuture && proposal?.action_type) {
+          useSettingsStore.getState().addLearnedApproval(proposal.action_type)
+          toast.info(`Will auto-approve ${proposal.action_type.replace(/_/g, ' ')} from now on`)
+      }
+      
+      // Confirm preview in screen controller
+      const sc = useScreenController.getState()
+      const previewId = Array.from(sc.previews.keys()).find(id => 
+          sc.previews.get(id)?.data?.id === proposalId
+      )
+      if (previewId) {
+          if (approved) {
+              sc.confirmPreview(previewId)
+          } else {
+              sc.cancelPreview(previewId)
+          }
+      }
       
       const buildFollowUps = () => {
           if (!proposal) return []
@@ -392,6 +448,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   messages: [...state.messages, successMessage],
                   suggestedActions: followUps.length ? followUps : state.suggestedActions
               }))
+              
+              // Trigger confetti celebration on successful execution
+              if (status === "executed" && useSettingsStore.getState().confettiEnabled) {
+                  triggerConfetti(0.5, 0.7)
+              }
           } else if (!approved) {
               const rejectMessage: ChatMessage = {
                   id: Date.now().toString(),

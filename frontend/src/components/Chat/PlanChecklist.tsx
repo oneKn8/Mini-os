@@ -20,8 +20,8 @@ interface PlanChecklistProps {
 
 export default function PlanChecklist({ plan, onPlanUpdate }: PlanChecklistProps) {
     const [checkedItems, setCheckedItems] = useState<Set<number>>(new Set())
-    const [mustDoItems, setMustDoItems] = useState<string[]>(plan.must_do_today || [])
-    const [focusAreas, setFocusAreas] = useState<string[]>(plan.focus_areas || [])
+    const [mustDoItems] = useState<string[]>(plan.must_do_today || [])
+    const [focusAreas] = useState<string[]>(plan.focus_areas || [])
     const [timeRecs, setTimeRecs] = useState(plan.time_recommendations || [])
 
     const toggleItem = (index: number) => {

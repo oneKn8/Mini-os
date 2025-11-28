@@ -30,7 +30,7 @@ export function useSSE({
   const [lastMessage, setLastMessage] = useState<SSEMessage | null>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectAttemptsRef = useRef(0)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const connect = useCallback(() => {
     // Don't connect if URL is empty (backend not available)

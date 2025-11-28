@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useChatStore } from '../../store/chatStore'
 import MessageList from './MessageList'
 import ChatInput from './ChatInput'
@@ -8,7 +8,6 @@ import ApprovalCard from './ApprovalCard'
 import PlanChecklist from './PlanChecklist'
 import ChatHeader from './ChatHeader'
 import SuggestedActions from './SuggestedActions'
-import { AgentStatusPanel, AgentStatus } from './AgentStatusPanel'
 
 export default function ChatWindow() {
   const { messages, isStreaming, loadHistory, pendingApprovals, handleApproval, currentReasoning } = useChatStore()
@@ -18,21 +17,6 @@ export default function ChatWindow() {
   })
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-
-  const agents = useMemo((): AgentStatus[] => {
-    if (!isStreaming) return []
-    
-    const currentTool = currentReasoning[currentReasoning.length - 1]?.tool
-    
-    return [{
-      id: 'assistant',
-      name: 'Assistant',
-      status: 'active',
-      capabilities: [],
-      toolsUsed: currentReasoning.filter(r => r.tool).length,
-      currentTool,
-    }]
-  }, [isStreaming, currentReasoning])
 
   useEffect(() => {
     localStorage.setItem('chatCollapsed', JSON.stringify(isCollapsed))
@@ -49,14 +33,12 @@ export default function ChatWindow() {
     loadHistory()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Smooth scroll only on new messages, not during streaming
+  // Scroll to bottom on new messages
   useEffect(() => {
-    if (!isStreaming) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }, [messages.length]) // eslint-disable-line react-hooks/exhaustive-deps
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
 
-  // Keep scroll at bottom during streaming without animation
+  // Keep scroll at bottom during streaming
   useEffect(() => {
     if (isStreaming && scrollContainerRef.current) {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
@@ -100,8 +82,16 @@ export default function ChatWindow() {
       >
         <MessageList messages={messages} />
         
-        {/* Minimal status indicator */}
-        {isStreaming && <AgentStatusPanel agents={agents} />}
+        {/* Processing indicator - shows during streaming */}
+        {isStreaming && (
+          <div className="bg-zinc-900/50 rounded-lg p-3 border border-zinc-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 size={14} className="animate-spin text-blue-400" />
+              <span className="text-sm text-zinc-300 font-medium">Processing your request...</span>
+            </div>
+            <WorkflowVisualization />
+          </div>
+        )}
         
         {/* Plan Checklists */}
         {messages.map((msg) => {
@@ -118,7 +108,7 @@ export default function ChatWindow() {
               <ApprovalCard 
                 key={proposal.id} 
                 proposal={proposal}
-                onApprove={(id, editedPayload) => handleApproval(id, true, editedPayload)}
+                onApprove={(id, editedPayload, skipFuture) => handleApproval(id, true, editedPayload, skipFuture)}
                 onReject={(id) => handleApproval(id, false)}
               />
             ))}
@@ -126,7 +116,6 @@ export default function ChatWindow() {
         )}
 
         <SuggestedActions />
-        <WorkflowVisualization />
         <div ref={messagesEndRef} />
       </div>
 

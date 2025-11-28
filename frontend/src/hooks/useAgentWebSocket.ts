@@ -121,7 +121,7 @@ export function useAgentWebSocket({
         onError?.('WebSocket connection error')
       }
 
-      ws.onclose = (event) => {
+      ws.onclose = () => {
         setState(prev => ({
           ...prev,
           isConnected: false,

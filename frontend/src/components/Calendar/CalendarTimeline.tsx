@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CalendarEvent } from '../../api/calendar'
-import { gsap } from '../../utils/gsap'
+// import { gsap } from '../../utils/gsap'
 import EventCard from './EventCard'
 import TimeIndicator from './TimeIndicator'
 
@@ -16,7 +16,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i)
 export default function CalendarTimeline({
   events,
   currentDate,
-  view,
+  view: _view,
   onEventClick,
 }: CalendarTimelineProps) {
   const containerRef = useRef<HTMLDivElement>(null)

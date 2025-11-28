@@ -206,7 +206,8 @@ export const workflowAnimations = {
       duration: 0.2,
       ease: 'power2.out',
     })
-      .call(() => workflowAnimations.shakeNode(element))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .call(() => workflowAnimations.shakeNode(element) as any)
       .to(element, {
         duration: 0.3,
       });

@@ -22,6 +22,11 @@ from orchestrator.agents.conversational_agent import ConversationalAgent
 from orchestrator.state import UserContext
 from orchestrator.risk_assessment import get_risk_assessor, ActionContext
 from orchestrator.preference_learner import get_preference_engine
+from orchestrator.tools.ui_mapping import (
+    get_tool_ui,
+    is_tool_safe,
+    get_tool_preview_type,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -378,20 +383,65 @@ class ChatService:
                         "step": "thinking",
                     }
                 elif event_type == "tool_start":
+                    tool_name = event.get("tool", "tool")
+                    tool_args = event.get("args", {})
+
+                    # Get UI configuration for this tool
+                    tool_ui = get_tool_ui(tool_name, tool_args)
+
+                    # Emit screen control event to navigate to relevant page
+                    if tool_ui.get("page"):
+                        yield {
+                            "type": "screen_control",
+                            "action": "focus",
+                            "page": tool_ui["page"],
+                            "cursor": tool_ui.get("cursor"),
+                            "state": "working",
+                            "tool": tool_name,
+                        }
+
+                    # Emit thought bubble
+                    if tool_ui.get("thought"):
+                        yield {
+                            "type": "thought",
+                            "content": tool_ui["thought"],
+                            "cursor": tool_ui.get("cursor"),
+                        }
+
+                    # Emit tool start
                     yield {
                         "type": "tool_start",
-                        "tool": event.get("tool", "tool"),
+                        "tool": tool_name,
                         "action": event.get("action", "Processing"),
                         "icon": event.get("icon", ""),
-                        "args": event.get("args", {}),
+                        "args": tool_args,
+                        "safe": is_tool_safe(tool_name),
                     }
                 elif event_type == "tool_result":
+                    tool_name = event.get("tool", "tool")
+                    tool_result = event.get("result", {})
+                    tool_ui = get_tool_ui(tool_name)
+
+                    # Check if this tool generates a preview
+                    preview_type = get_tool_preview_type(tool_name)
+                    if preview_type:
+                        yield {
+                            "type": "preview",
+                            "preview_type": preview_type,
+                            "page": tool_ui.get("page"),
+                            "data": tool_result,
+                            "cursor": tool_ui.get("cursor"),
+                            "safe": is_tool_safe(tool_name),
+                        }
+
                     yield {
                         "type": "tool_result",
-                        "tool": event.get("tool", "tool"),
+                        "tool": tool_name,
                         "icon": event.get("icon", ""),
-                        "result": event.get("result", {}),
+                        "result": tool_result,
                         "success": event.get("success", True),
+                        "safe": is_tool_safe(tool_name),
+                        "auto_executed": is_tool_safe(tool_name),
                     }
                 elif event_type == "tool_error":
                     yield {
@@ -596,6 +646,13 @@ class ChatService:
                             "requires_approval": event.get("requires_approval", False),
                             "auto_approved_count": event.get("auto_approved_count", 0),
                         },
+                    }
+
+                    # Release screen control when done
+                    yield {
+                        "type": "screen_control",
+                        "action": "release",
+                        "state": "idle",
                     }
                 elif event_type == "error":
                     yield {
@@ -911,8 +968,8 @@ async def approve_action(action_id: str, request: Dict[str, bool], db: Session =
             signal = PreferenceSignal(
                 user_id=proposal.user_id,
                 signal_type="approve_proposal",
-                related_item_id=proposal.related_item_id,
-                metadata={"action_id": str(action_id)},
+                item_id=proposal.related_item_id,
+                context={"action_id": str(action_id)},
             )
             db.add(signal)
             db.commit()
@@ -962,8 +1019,8 @@ async def approve_action(action_id: str, request: Dict[str, bool], db: Session =
         signal = PreferenceSignal(
             user_id=proposal.user_id,
             signal_type="reject_proposal",
-            related_item_id=proposal.related_item_id,
-            metadata={"action_id": str(action_id)},
+            item_id=proposal.related_item_id,
+            context={"action_id": str(action_id)},
         )
         db.add(signal)
         db.commit()

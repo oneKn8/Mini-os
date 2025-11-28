@@ -10,7 +10,7 @@ interface ApprovalCardProps {
     explanation: string
     payload: any
   }
-  onApprove: (id: string, editedPayload?: any) => void
+  onApprove: (id: string, editedPayload?: any, skipFuture?: boolean) => void
   onReject: (id: string) => void
 }
 
@@ -18,13 +18,26 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
   const { payload, explanation } = proposal
   const [isEditing, setIsEditing] = useState(false)
   const [editedPayload, setEditedPayload] = useState(payload)
+  const [dontAskAgain, setDontAskAgain] = useState(false)
 
   const isEmail = proposal.action_type === 'create_email_draft'
   const isEvent = proposal.action_type === 'create_calendar_event'
 
+  // Friendly action type labels
+  const actionLabels: Record<string, string> = {
+    create_email_draft: 'email drafts',
+    create_calendar_event: 'calendar events',
+    send_email: 'sending emails',
+  }
+  const actionLabel = actionLabels[proposal.action_type] || proposal.action_type.replace(/_/g, ' ')
+
+  const handleApprove = () => {
+    onApprove(proposal.id, isEditing ? editedPayload : undefined, dontAskAgain)
+  }
+
   const handleSave = () => {
     setIsEditing(false)
-    onApprove(proposal.id, editedPayload)
+    onApprove(proposal.id, editedPayload, dontAskAgain)
   }
 
   const formatDate = (dateStr: string) => {
@@ -41,7 +54,7 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
       <div className="px-4 py-3 border-b border-zinc-800/50 flex justify-between items-start">
         <div className="flex items-center gap-2">
           {isEvent ? <Calendar size={14} className="text-zinc-500" /> : <Mail size={14} className="text-zinc-500" />}
-          <span className="text-xs text-amber-500 font-medium">Needs approval</span>
+          <span className="text-xs text-amber-500/80 font-medium">Needs approval</span>
         </div>
         {!isEditing && (
           <button
@@ -65,7 +78,7 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
                 <input
                   value={editedPayload.to || ''}
                   onChange={(e) => setEditedPayload({ ...editedPayload, to: e.target.value })}
-                  className="flex-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-zinc-200 focus:outline-none focus:border-zinc-600"
+                  className="flex-1 px-2 py-1 bg-zinc-800/50 border border-zinc-700/50 rounded text-zinc-200 focus:outline-none focus:border-zinc-600"
                 />
               ) : (
                 <span className="text-zinc-300">{payload.to}</span>
@@ -77,7 +90,7 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
                 <input
                   value={editedPayload.subject || ''}
                   onChange={(e) => setEditedPayload({ ...editedPayload, subject: e.target.value })}
-                  className="flex-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-zinc-200 focus:outline-none focus:border-zinc-600"
+                  className="flex-1 px-2 py-1 bg-zinc-800/50 border border-zinc-700/50 rounded text-zinc-200 focus:outline-none focus:border-zinc-600"
                 />
               ) : (
                 <span className="text-zinc-300">{payload.subject}</span>
@@ -88,7 +101,7 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
                 value={editedPayload.body || ''}
                 onChange={(e) => setEditedPayload({ ...editedPayload, body: e.target.value })}
                 rows={4}
-                className="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-zinc-200 focus:outline-none focus:border-zinc-600 resize-none"
+                className="w-full px-2 py-1 bg-zinc-800/50 border border-zinc-700/50 rounded text-zinc-200 focus:outline-none focus:border-zinc-600 resize-none"
               />
             )}
           </div>
@@ -102,7 +115,7 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
                 <input
                   value={editedPayload.title || ''}
                   onChange={(e) => setEditedPayload({ ...editedPayload, title: e.target.value })}
-                  className="flex-1 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-zinc-200 focus:outline-none focus:border-zinc-600"
+                  className="flex-1 px-2 py-1 bg-zinc-800/50 border border-zinc-700/50 rounded text-zinc-200 focus:outline-none focus:border-zinc-600"
                 />
               ) : (
                 <span className="text-zinc-300">{payload.title}</span>
@@ -122,42 +135,63 @@ export default function ApprovalCard({ proposal, onApprove, onReject }: Approval
         )}
       </div>
 
+      {/* Don't ask again checkbox */}
+      <div className="px-4 pb-2">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={dontAskAgain}
+            onChange={(e) => setDontAskAgain(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-zinc-700 bg-zinc-800/50 text-zinc-500 
+                       focus:ring-0 focus:ring-offset-0 cursor-pointer"
+          />
+          <span className="text-xs text-zinc-500 group-hover:text-zinc-400 transition-colors">
+            Don't ask again for {actionLabel}
+          </span>
+        </label>
+      </div>
+
       {/* Actions */}
-      <div className="px-4 py-3 border-t border-zinc-800/50 flex justify-end gap-2">
-        {isEditing ? (
-          <>
-            <button
-              onClick={() => { setIsEditing(false); setEditedPayload(payload) }}
-              className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-zinc-700 text-zinc-100 rounded hover:bg-zinc-600 transition-colors"
-            >
-              <Save size={12} />
-              Save & Approve
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => onReject(proposal.id)}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs text-zinc-400 hover:text-red-400 transition-colors"
-            >
-              <X size={12} />
-              Reject
-            </button>
-            <button
-              onClick={() => onApprove(proposal.id)}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs bg-zinc-700 text-zinc-100 rounded hover:bg-zinc-600 transition-colors"
-            >
-              <Check size={12} />
-              Approve
-            </button>
-          </>
-        )}
+      <div className="px-4 py-3 border-t border-zinc-800/50 flex justify-between items-center">
+        <span className="text-xs text-zinc-600">Press Enter to approve</span>
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <button
+                onClick={() => { setIsEditing(false); setEditedPayload(payload) }}
+                className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-zinc-800 text-zinc-200 rounded 
+                           border border-zinc-700/50 hover:bg-zinc-700 transition-colors"
+              >
+                <Save size={12} />
+                Save & Approve
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => onReject(proposal.id)}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors"
+              >
+                <X size={12} />
+                Reject
+              </button>
+              <button
+                onClick={handleApprove}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-zinc-800 text-zinc-200 rounded 
+                           border border-zinc-700/50 hover:bg-zinc-700 transition-colors"
+              >
+                <Check size={12} />
+                Approve
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

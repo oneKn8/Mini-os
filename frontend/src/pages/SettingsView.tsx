@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Mail, Calendar, Moon, Globe, Cpu, LogOut, Shield } from 'lucide-react'
+import { Mail, Calendar, Moon, Globe, Cpu, LogOut, Shield, Sparkles, Mouse, MessageSquare, Eye, Zap, Trash2, X } from 'lucide-react'
 import GlassCard from '../components/UI/GlassCard'
 import { useChatStore } from '../store/chatStore'
+import { useSettingsStore } from '../store/settingsStore'
 
 const AVAILABLE_MODELS = [
     // OpenAI Models
@@ -34,8 +35,44 @@ interface Preferences {
   auto_sync_interval: string
 }
 
+// Toggle switch component (minimal design)
+function Toggle({ 
+  enabled, 
+  onChange, 
+  size = 'md' 
+}: { 
+  enabled: boolean
+  onChange: (enabled: boolean) => void
+  size?: 'sm' | 'md'
+}) {
+  const sizeClasses = size === 'sm' 
+    ? 'w-9 h-5' 
+    : 'w-11 h-6'
+  const dotSizeClasses = size === 'sm'
+    ? 'w-3 h-3 top-1 left-1'
+    : 'w-4 h-4 top-1 left-1'
+  const translateClass = size === 'sm' ? 'translate-x-4' : 'translate-x-5'
+
+  return (
+    <button
+      onClick={() => onChange(!enabled)}
+      className={`${sizeClasses} rounded-full transition-colors relative border border-zinc-700/50 ${
+        enabled ? 'bg-blue-500/30' : 'bg-zinc-800/50'
+      }`}
+    >
+      <div 
+        className={`absolute ${dotSizeClasses} rounded-full transition-transform ${
+          enabled ? `${translateClass} bg-blue-400` : 'bg-zinc-500'
+        }`} 
+      />
+    </button>
+  )
+}
+
 export default function SettingsView() {
   const { selectedModel, setModel } = useChatStore()
+  const settings = useSettingsStore()
+  
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([])
   const [preferences, setPreferences] = useState<Preferences>({
     quiet_hours_enabled: true,
@@ -85,8 +122,6 @@ export default function SettingsView() {
       const response = await fetch(endpoint, { method: 'POST' })
       
       if (response.ok) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const data = await response.json()
         alert('Authorization started! A browser window should open shortly.')
         
         setTimeout(async () => {
@@ -123,30 +158,212 @@ export default function SettingsView() {
     return accounts.some(acc => acc.provider === provider && acc.status === 'active')
   }
 
+  const actionTypeLabels: Record<string, string> = {
+    create_email_draft: 'Email drafts',
+    create_calendar_event: 'Calendar events',
+    send_email: 'Sending emails',
+  }
+
   return (
-    <div className="space-y-8 pb-20 max-w-5xl mx-auto relative z-10">
-      <h1 className="text-4xl font-bold text-white text-glow mb-8">System Configuration</h1>
+    <div className="space-y-6 pb-20 max-w-5xl mx-auto relative z-10">
+      <h1 className="text-2xl font-medium text-white mb-6">Settings</h1>
 
       {error && (
-        <div className="rounded-xl bg-accent-error/10 border border-accent-error/20 p-4 text-accent-error text-sm flex items-center gap-2">
-           <Shield size={16} />
+        <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-sm flex items-center gap-2">
+           <Shield size={14} />
            {error}
         </div>
       )}
 
-      <div className="grid gap-8 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
+        
+        {/* Agent Visual Settings */}
+        <GlassCard className="p-6 flex flex-col gap-5" variant="dark">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 rounded-lg bg-violet-500/10 text-violet-400"><Eye size={18} /></div>
+            <div>
+              <h2 className="text-base font-medium text-white">Agent Visuals</h2>
+              <p className="text-xs text-zinc-500">Control how the agent appears</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Agent Cursor */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <Mouse size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Agent Cursor</div>
+                  <div className="text-xs text-zinc-600">Glowing cursor showing where agent looks</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.agentCursor} 
+                onChange={(v) => settings.updateSetting('agentCursor', v)} 
+              />
+            </div>
+
+            {/* Thought Bubbles */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <MessageSquare size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Thought Bubbles</div>
+                  <div className="text-xs text-zinc-600">Show agent's reasoning</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.thoughtBubbles} 
+                onChange={(v) => settings.updateSetting('thoughtBubbles', v)} 
+              />
+            </div>
+
+            {/* Confetti */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <Sparkles size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Confetti Effects</div>
+                  <div className="text-xs text-zinc-600">Celebrate completed actions</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.confettiEnabled} 
+                onChange={(v) => settings.updateSetting('confettiEnabled', v)} 
+              />
+            </div>
+
+            {/* Reduced Motion */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <Zap size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Reduced Motion</div>
+                  <div className="text-xs text-zinc-600">Minimize animations</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.reducedMotion} 
+                onChange={(v) => settings.updateSetting('reducedMotion', v)} 
+              />
+            </div>
+
+            {/* Agent Speed */}
+            <div className="pt-2">
+              <label className="text-xs font-medium text-zinc-500 mb-2 block">Animation Speed</label>
+              <div className="grid grid-cols-4 gap-2">
+                {(['slow', 'normal', 'fast', 'instant'] as const).map((speed) => (
+                  <button
+                    key={speed}
+                    onClick={() => settings.updateSetting('agentSpeed', speed)}
+                    className={`py-1.5 rounded-lg text-xs transition-all border ${
+                      settings.agentSpeed === speed
+                        ? 'bg-zinc-800 border-zinc-600 text-white'
+                        : 'bg-transparent border-zinc-800 text-zinc-500 hover:bg-zinc-800/50'
+                    }`}
+                  >
+                    {speed.charAt(0).toUpperCase() + speed.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </GlassCard>
+
+        {/* Agent Approval Settings */}
+        <GlassCard className="p-6 flex flex-col gap-5" variant="dark">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400"><Shield size={18} /></div>
+            <div>
+              <h2 className="text-base font-medium text-white">Agent Permissions</h2>
+              <p className="text-xs text-zinc-500">Control agent autonomy</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Auto-approve all */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <Zap size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Auto-Approve All</div>
+                  <div className="text-xs text-zinc-600">Skip all approval prompts</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.autoApproveAll} 
+                onChange={(v) => settings.updateSetting('autoApproveAll', v)} 
+              />
+            </div>
+
+            {/* Auto-navigate */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <Globe size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Auto-Navigate</div>
+                  <div className="text-xs text-zinc-600">Let agent navigate to relevant pages</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.autoNavigate} 
+                onChange={(v) => settings.updateSetting('autoNavigate', v)} 
+              />
+            </div>
+
+            {/* Learn Preferences */}
+            <div className="flex items-center justify-between py-2">
+              <div className="flex items-center gap-3">
+                <Cpu size={16} className="text-zinc-500" />
+                <div>
+                  <div className="text-sm text-zinc-300">Learn Preferences</div>
+                  <div className="text-xs text-zinc-600">Improve over time</div>
+                </div>
+              </div>
+              <Toggle 
+                enabled={settings.learnPreferences} 
+                onChange={(v) => settings.updateSetting('learnPreferences', v)} 
+              />
+            </div>
+
+            {/* Learned Approvals */}
+            {settings.learnedApprovals.length > 0 && (
+              <div className="pt-2">
+                <label className="text-xs font-medium text-zinc-500 mb-2 block">Auto-Approved Actions</label>
+                <div className="space-y-2">
+                  {settings.learnedApprovals.map((actionType) => (
+                    <div 
+                      key={actionType}
+                      className="flex items-center justify-between px-3 py-2 rounded-lg bg-zinc-800/50 border border-zinc-800"
+                    >
+                      <span className="text-xs text-zinc-400">
+                        {actionTypeLabels[actionType] || actionType.replace(/_/g, ' ')}
+                      </span>
+                      <button
+                        onClick={() => settings.removeLearnedApproval(actionType)}
+                        className="p-1 text-zinc-600 hover:text-red-400 transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </GlassCard>
         
         {/* Connected Accounts */}
-        <GlassCard className="p-8 flex flex-col gap-6" variant="dark">
-           <div className="flex items-center gap-3 mb-2">
-             <div className="p-2 rounded-lg bg-accent-primary/20 text-accent-primary"><Globe size={24} /></div>
+        <GlassCard className="p-6 flex flex-col gap-5" variant="dark">
+           <div className="flex items-center gap-3 mb-1">
+             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400"><Globe size={18} /></div>
              <div>
-               <h2 className="text-xl font-bold text-white">Integrations</h2>
-               <p className="text-sm text-text-tertiary">Manage external data sources</p>
+               <h2 className="text-base font-medium text-white">Integrations</h2>
+               <p className="text-xs text-zinc-500">Manage external data sources</p>
              </div>
            </div>
 
-           <div className="space-y-4">
+           <div className="space-y-3">
              {[
                { name: 'Gmail', key: 'gmail', icon: Mail },
                { name: 'Google Calendar', key: 'google_calendar', icon: Calendar }
@@ -156,14 +373,14 @@ export default function SettingsView() {
                const accountData = accounts.find(acc => acc.provider === account.key)
 
                return (
-                 <div key={account.key} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                   <div className="flex items-center gap-4">
-                     <div className={`p-2 rounded-full ${connected ? 'bg-accent-success/20 text-accent-success' : 'bg-text-tertiary/20 text-text-tertiary'}`}>
-                       <account.icon size={20} />
+                 <div key={account.key} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30 border border-zinc-800/50">
+                   <div className="flex items-center gap-3">
+                     <div className={`p-1.5 rounded-lg ${connected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>
+                       <account.icon size={16} />
                      </div>
                      <div>
-                       <div className="font-bold text-white">{account.name}</div>
-                       <div className="text-xs text-text-tertiary">
+                       <div className="text-sm text-zinc-300">{account.name}</div>
+                       <div className="text-xs text-zinc-600">
                          {connected ? (accountData?.provider_email || 'Connected') : 'Not connected'}
                        </div>
                      </div>
@@ -171,10 +388,10 @@ export default function SettingsView() {
                    <button
                      onClick={() => connectAccount(account.key as 'gmail' | 'calendar')}
                      disabled={isLoading || connected}
-                     className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                     className={`px-3 py-1.5 rounded-lg text-xs transition-all border ${
                        connected 
-                         ? 'bg-green-500/20 text-green-400 cursor-default' 
-                         : 'bg-accent-primary hover:bg-accent-primary-hover text-white shadow-lg shadow-accent-primary/20'
+                         ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 cursor-default' 
+                         : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700'
                      }`}
                    >
                      {isLoading ? 'Syncing...' : connected ? 'Active' : 'Connect'}
@@ -186,43 +403,41 @@ export default function SettingsView() {
         </GlassCard>
 
         {/* System Preferences */}
-        <GlassCard className="p-8 flex flex-col gap-6" variant="dark">
-           <div className="flex items-center gap-3 mb-2">
-             <div className="p-2 rounded-lg bg-accent-secondary/20 text-accent-secondary"><Cpu size={24} /></div>
+        <GlassCard className="p-6 flex flex-col gap-5" variant="dark">
+           <div className="flex items-center gap-3 mb-1">
+             <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400"><Cpu size={18} /></div>
              <div>
-               <h2 className="text-xl font-bold text-white">System Preferences</h2>
-               <p className="text-sm text-text-tertiary">Configure agent behavior</p>
+               <h2 className="text-base font-medium text-white">System</h2>
+               <p className="text-xs text-zinc-500">Core preferences</p>
              </div>
            </div>
 
-           <div className="space-y-6">
+           <div className="space-y-4">
              {/* Quiet Hours Toggle */}
-             <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+             <div className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-3">
-                   <Moon size={20} className="text-purple-400" />
+                   <Moon size={16} className="text-zinc-500" />
                    <div>
-                      <div className="font-bold text-white">Quiet Hours</div>
-                      <div className="text-xs text-text-tertiary">Pause notifications ({preferences.quiet_hours_start} - {preferences.quiet_hours_end})</div>
+                      <div className="text-sm text-zinc-300">Quiet Hours</div>
+                      <div className="text-xs text-zinc-600">{preferences.quiet_hours_start} - {preferences.quiet_hours_end}</div>
                    </div>
                 </div>
-                <button
-                  onClick={() => updatePreferences({ quiet_hours_enabled: !preferences.quiet_hours_enabled })}
-                  className={`w-12 h-6 rounded-full transition-colors relative ${preferences.quiet_hours_enabled ? 'bg-accent-primary' : 'bg-white/20'}`}
-                >
-                  <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${preferences.quiet_hours_enabled ? 'translate-x-6' : ''}`} />
-                </button>
+                <Toggle 
+                  enabled={preferences.quiet_hours_enabled} 
+                  onChange={(v) => updatePreferences({ quiet_hours_enabled: v })} 
+                />
              </div>
 
              {/* AI Model Selection */}
              <div>
-               <label className="text-sm font-bold text-text-secondary mb-2 block">AI Model</label>
+               <label className="text-xs font-medium text-zinc-500 mb-2 block">AI Model</label>
                <select 
                  value={selectedModel ? `${selectedModel.provider}:${selectedModel.name}` : 'openai:gpt-5'}
                  onChange={(e) => {
                    const [provider, name] = e.target.value.split(':')
                    setModel(provider, name)
                  }}
-                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-accent-primary outline-none appearance-none"
+                 className="w-full bg-zinc-800/50 border border-zinc-700/50 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:border-zinc-600 outline-none"
                >
                  <optgroup label="OpenAI">
                    {AVAILABLE_MODELS.filter(m => m.provider === 'openai').map(model => (
@@ -239,23 +454,40 @@ export default function SettingsView() {
                    ))}
                  </optgroup>
                </select>
-               <p className="text-xs text-text-tertiary mt-2">
-                 Current: {selectedModel ? `${AVAILABLE_MODELS.find(m => m.id === selectedModel.name && m.provider === selectedModel.provider)?.name || selectedModel.name}` : 'GPT-5 (default)'}
-               </p>
+             </div>
+
+             {/* Temperature Unit */}
+             <div>
+               <label className="text-xs font-medium text-zinc-500 mb-2 block">Temperature Unit</label>
+               <div className="grid grid-cols-2 gap-2">
+                 {(['celsius', 'fahrenheit'] as const).map((unit) => (
+                   <button
+                     key={unit}
+                     onClick={() => settings.updateSetting('tempUnit', unit)}
+                     className={`py-1.5 rounded-lg text-xs transition-all border ${
+                       settings.tempUnit === unit
+                         ? 'bg-zinc-800 border-zinc-600 text-white'
+                         : 'bg-transparent border-zinc-800 text-zinc-500 hover:bg-zinc-800/50'
+                     }`}
+                   >
+                     {unit === 'celsius' ? '°C Celsius' : '°F Fahrenheit'}
+                   </button>
+                 ))}
+               </div>
              </div>
 
              {/* Sync Interval */}
              <div>
-               <label className="text-sm font-bold text-text-secondary mb-2 block">Sync Frequency</label>
+               <label className="text-xs font-medium text-zinc-500 mb-2 block">Sync Frequency</label>
                <div className="grid grid-cols-3 gap-2">
                  {['manual', '15', '60'].map((interval) => (
                    <button
                      key={interval}
                      onClick={() => updatePreferences({ auto_sync_interval: interval })}
-                     className={`py-2 rounded-lg text-sm font-medium transition-all border ${
+                     className={`py-1.5 rounded-lg text-xs transition-all border ${
                        preferences.auto_sync_interval === interval
-                         ? 'bg-accent-primary/20 border-accent-primary text-white'
-                         : 'bg-transparent border-white/10 text-text-tertiary hover:bg-white/5'
+                         ? 'bg-zinc-800 border-zinc-600 text-white'
+                         : 'bg-transparent border-zinc-800 text-zinc-500 hover:bg-zinc-800/50'
                      }`}
                    >
                      {interval === 'manual' ? 'Manual' : `${interval}m`}
@@ -267,19 +499,28 @@ export default function SettingsView() {
         </GlassCard>
 
         {/* Danger Zone */}
-        <GlassCard className="md:col-span-2 p-8 flex items-center justify-between" variant="dark">
-           <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-red-500/10 text-red-500">
-                <LogOut size={24} />
+        <GlassCard className="md:col-span-2 p-4 flex items-center justify-between" variant="dark">
+           <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-500/10 text-red-400">
+                <LogOut size={18} />
               </div>
               <div>
-                <h3 className="font-bold text-white">Sign Out</h3>
-                <p className="text-sm text-text-tertiary">End your current session</p>
+                <h3 className="text-sm font-medium text-zinc-300">Sign Out</h3>
+                <p className="text-xs text-zinc-600">End your current session</p>
               </div>
            </div>
-           <button className="px-6 py-2 rounded-xl border border-red-500/50 text-red-500 hover:bg-red-500/10 transition-colors font-bold">
-             Log Out
-           </button>
+           <div className="flex items-center gap-2">
+             <button 
+               onClick={() => settings.resetToDefaults()}
+               className="px-3 py-1.5 rounded-lg border border-zinc-700/50 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50 transition-colors text-xs flex items-center gap-1.5"
+             >
+               <Trash2 size={12} />
+               Reset Settings
+             </button>
+             <button className="px-4 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors text-xs">
+               Log Out
+             </button>
+           </div>
         </GlassCard>
 
       </div>

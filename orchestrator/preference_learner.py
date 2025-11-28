@@ -40,6 +40,12 @@ class PreferenceProfile:
     total_interactions: int = 0
     auto_approve_success_rate: float = 0.0  # For actions that were auto-approved
 
+    # "Don't ask again" - action types user has opted to skip approval for
+    skip_approval_for: set = field(default_factory=set)
+
+    # Auto-approve all - master toggle
+    auto_approve_all: bool = False
+
     def get_preference(self, preference_type: str) -> Optional[UserPreference]:
         """Get a specific preference."""
         return self.preferences.get(preference_type)
@@ -48,6 +54,24 @@ class PreferenceProfile:
         """Set or update a preference."""
         self.preferences[pref.preference_type] = pref
         pref.last_updated = datetime.now()
+
+    def mark_skip_approval(self, action_type: str):
+        """Mark an action type to skip approval (don't ask again)."""
+        self.skip_approval_for.add(action_type)
+
+    def should_skip_approval(self, action_type: str) -> bool:
+        """Check if approval should be skipped for an action type."""
+        if self.auto_approve_all:
+            return True
+        return action_type in self.skip_approval_for
+
+    def clear_skip_approval(self, action_type: str):
+        """Remove skip approval for an action type."""
+        self.skip_approval_for.discard(action_type)
+
+    def set_auto_approve_all(self, enabled: bool):
+        """Set master auto-approve toggle."""
+        self.auto_approve_all = enabled
 
 
 class PreferenceEngine:
@@ -516,6 +540,13 @@ class PreferenceEngine:
         """
         profile = self.get_or_create_profile(user_id)
 
+        # Check if user has opted to skip approval for this action type
+        if profile.should_skip_approval(action_type):
+            reason = "User opted to skip approval for this action type"
+            if profile.auto_approve_all:
+                reason = "User has auto-approve all enabled"
+            return True, 0.95, reason
+
         # Get personalized threshold
         threshold = self.get_adjusted_risk_threshold(user_id, base_threshold)
 
@@ -630,6 +661,73 @@ class PreferenceEngine:
             "auto_success_rate": auto_success_rate,
             "total_users": len(self._profiles_cache),
         }
+
+    # =========================================================================
+    # "Don't Ask Again" / Skip Approval Methods
+    # =========================================================================
+
+    def mark_skip_approval(self, user_id: str, action_type: str):
+        """
+        Mark an action type to skip approval for a user.
+
+        Called when user selects "Don't ask again for this type".
+        """
+        profile = self.get_or_create_profile(user_id)
+        profile.mark_skip_approval(action_type)
+
+        # Persist to database
+        if self.db:
+            try:
+                self._save_profile_to_db(profile)
+            except Exception as e:
+                logger.warning(f"Failed to persist skip approval: {e}")
+
+        logger.info(f"User {user_id} opted to skip approval for {action_type}")
+
+    def should_skip_approval(self, user_id: str, action_type: str) -> bool:
+        """
+        Check if approval should be skipped for an action type.
+
+        Returns True if:
+        - User has auto_approve_all enabled
+        - User previously said "don't ask again" for this action type
+        """
+        profile = self.get_or_create_profile(user_id)
+        return profile.should_skip_approval(action_type)
+
+    def clear_skip_approval(self, user_id: str, action_type: str):
+        """Remove skip approval for an action type."""
+        profile = self.get_or_create_profile(user_id)
+        profile.clear_skip_approval(action_type)
+
+        if self.db:
+            try:
+                self._save_profile_to_db(profile)
+            except Exception as e:
+                logger.warning(f"Failed to persist skip approval removal: {e}")
+
+    def set_auto_approve_all(self, user_id: str, enabled: bool):
+        """Set master auto-approve toggle for a user."""
+        profile = self.get_or_create_profile(user_id)
+        profile.set_auto_approve_all(enabled)
+
+        if self.db:
+            try:
+                self._save_profile_to_db(profile)
+            except Exception as e:
+                logger.warning(f"Failed to persist auto_approve_all: {e}")
+
+        logger.info(f"User {user_id} set auto_approve_all to {enabled}")
+
+    def get_skipped_action_types(self, user_id: str) -> list:
+        """Get list of action types user has opted to skip approval for."""
+        profile = self.get_or_create_profile(user_id)
+        return list(profile.skip_approval_for)
+
+    def is_auto_approve_all_enabled(self, user_id: str) -> bool:
+        """Check if user has auto_approve_all enabled."""
+        profile = self.get_or_create_profile(user_id)
+        return profile.auto_approve_all
 
 
 # Global instance

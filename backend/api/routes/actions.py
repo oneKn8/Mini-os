@@ -60,8 +60,8 @@ async def approve_action(action_id: str, db: Session = Depends(get_db)):
     signal = PreferenceSignal(
         user_id=proposal.user_id,
         signal_type="approve_proposal",
-        related_item_id=proposal.related_item_id,
-        metadata={"action_id": str(action_id)},
+        item_id=proposal.related_item_id,
+        context={"action_id": str(action_id)},
     )
     db.add(signal)
     db.commit()
@@ -92,8 +92,8 @@ async def reject_action(action_id: str, db: Session = Depends(get_db)):
     signal = PreferenceSignal(
         user_id=proposal.user_id,
         signal_type="reject_proposal",
-        related_item_id=proposal.related_item_id,
-        metadata={"action_id": str(action_id)},
+        item_id=proposal.related_item_id,
+        context={"action_id": str(action_id)},
     )
     db.add(signal)
     db.commit()

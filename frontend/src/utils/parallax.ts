@@ -53,7 +53,7 @@ export function parallaxBackground(
  * Mouse-based parallax for SVG elements
  */
 export function svgMouseParallax(
-  svgElement: SVGSVGElement | string,
+  _svgElement: SVGSVGElement | string,
   elements: Array<{ selector: string; intensity: number }>
 ) {
   const handleMouseMove = (e: MouseEvent) => {

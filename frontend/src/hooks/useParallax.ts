@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { mouseParallax, parallaxScroll } from '../utils/gsap'
 
 export function useParallax(speed: number = 0.5) {

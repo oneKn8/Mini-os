@@ -61,7 +61,7 @@ export function animateOnMount(
  * Stagger animation for list items
  */
 export function staggerAnimation(
-  selector: string | HTMLElement[],
+  selector: string | Element[] | HTMLElement[] | HTMLCollection,
   animation: gsap.TweenVars = animations.fadeIn,
   stagger: number = 0.1
 ) {

@@ -1,9 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
 import { InboxItem } from '../../api/inbox'
-import { Briefcase, User, DollarSign, Mail } from 'lucide-react'
 import { clsx } from 'clsx'
-import { hoverScale } from '../../utils/gsap'
 
 interface EmailItemProps {
   item: InboxItem
@@ -11,73 +7,97 @@ interface EmailItemProps {
   onClick: () => void
 }
 
-const CategoryIcon = ({ category }: { category: string }) => {
-  switch (category) {
-    case "work": return <Briefcase size={14} className="text-accent-secondary" />
-    case "personal": return <User size={14} className="text-accent-success" />
-    case "finance": return <DollarSign size={14} className="text-accent-warning" />
-    default: return <Mail size={14} className="text-text-tertiary" />
+// Importance indicator - subtle dots
+const ImportanceDot = ({ level }: { level: string }) => {
+  const colors: Record<string, string> = {
+    critical: 'bg-red-400',
+    high: 'bg-amber-400',
+    medium: 'bg-blue-400',
+    low: 'bg-zinc-500',
+    ignore: 'bg-zinc-700',
   }
+  return <div className={clsx("w-1.5 h-1.5 rounded-full flex-shrink-0", colors[level] || 'bg-zinc-600')} />
 }
 
-const ImportanceDot = ({ level }: { level: string }) => {
-  const color = {
-    high: 'bg-accent-error',
-    medium: 'bg-accent-warning',
-    low: 'bg-accent-success'
-  }[level] || 'bg-text-tertiary'
-  return <div className={`w-2 h-2 rounded-full ${color} shadow-[0_0_8px_rgba(0,0,0,0.5)]`} />
+// Category colors
+const categoryColors: Record<string, string> = {
+  work: 'text-blue-400',
+  personal: 'text-violet-400',
+  finance: 'text-emerald-400',
+}
+
+// Format relative time
+const formatTime = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`
+  if (diff < 604800000) return date.toLocaleDateString('en-US', { weekday: 'short' })
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 export default function EmailItem({ item, isSelected, onClick }: EmailItemProps) {
-  const itemRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (itemRef.current) {
-      const cleanup = hoverScale(itemRef.current, 1.02, 0.2)
-      return cleanup
-    }
-  }, [])
+  const isUnread = !item.read
 
   return (
-    <motion.div
-      ref={itemRef}
-      data-email-item
-      layoutId={`email-${item.id}`}
+    <div
+      data-email-item={item.id}
       onClick={onClick}
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      whileHover={{ scale: 1.02, x: 4 }}
       className={clsx(
-        "group cursor-pointer relative p-4 rounded-xl border transition-all duration-300",
-        isSelected 
-          ? "bg-accent-primary/10 border-accent-primary shadow-[0_0_15px_rgba(76,110,245,0.15)]" 
-          : "bg-surface/40 border-border-light hover:bg-surface/60 hover:border-border-medium"
+        "group cursor-pointer p-3 rounded-lg border transition-all duration-200",
+        isSelected
+          ? "bg-zinc-800/50 border-zinc-700"
+          : "bg-zinc-900/30 border-zinc-800/30 hover:bg-zinc-800/30 hover:border-zinc-800"
       )}
     >
-      <div className="flex justify-between items-start mb-2">
-        <div className="flex items-center gap-2">
+      {/* Top row: sender + time */}
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <div className="flex items-center gap-2 min-w-0">
           <ImportanceDot level={item.importance} />
-          <span className={clsx("text-sm font-semibold", !item.read ? "text-text-primary" : "text-text-secondary")}>
-            {item.sender}
+          <span className={clsx(
+            "text-sm truncate",
+            isUnread ? "font-medium text-zinc-200" : "text-zinc-400"
+          )}>
+            {item.sender || 'Unknown'}
           </span>
+          {isUnread && (
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+          )}
         </div>
-        <span className="text-[10px] text-text-tertiary">
-          {new Date(item.received_at).toLocaleDateString()}
+        <span className="text-[10px] text-zinc-600 flex-shrink-0">
+          {formatTime(item.received_at)}
         </span>
       </div>
-      <h3 className={clsx("text-sm mb-1 line-clamp-1", !item.read ? "font-bold text-text-primary" : "font-medium text-text-secondary")}>
+
+      {/* Subject */}
+      <h3 className={clsx(
+        "text-sm mb-1 truncate",
+        isUnread ? "text-zinc-200" : "text-zinc-400"
+      )}>
         {item.title}
       </h3>
-      <p className="text-xs text-text-tertiary line-clamp-2 mb-3">{item.body_preview}</p>
-      
-      <div className="flex gap-2">
-        <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/20 border border-white/5 text-[10px] text-text-secondary capitalize">
-          <CategoryIcon category={item.category} />
+
+      {/* Preview */}
+      <p className="text-xs text-zinc-600 line-clamp-2 mb-2">
+        {item.body_preview}
+      </p>
+
+      {/* Category tag */}
+      <div className="flex items-center gap-2">
+        <span className={clsx(
+          "text-[10px] capitalize",
+          categoryColors[item.category] || 'text-zinc-500'
+        )}>
           {item.category}
         </span>
+        {item.suggested_action && (
+          <span className="text-[10px] text-amber-500/70 truncate">
+            • {item.suggested_action}
+          </span>
+        )}
       </div>
-    </motion.div>
+    </div>
   )
 }
-

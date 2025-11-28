@@ -16,6 +16,7 @@ export interface InboxItem {
   category: string
   due_datetime?: string
   suggested_action?: string
+  read?: boolean
 }
 
 export async function fetchInboxItems(filter?: string): Promise<InboxItem[]> {

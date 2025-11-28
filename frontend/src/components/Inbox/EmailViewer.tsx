@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Reply, Archive, Trash2, X } from 'lucide-react'
-import { InboxItem } from '../../api/inbox'
+import { Reply, Archive, Trash2 } from 'lucide-react'
 import { useInboxItem } from '../../api/inbox'
 import GlassCard from '../UI/GlassCard'
 import { animateOnMount } from '../../utils/gsap'

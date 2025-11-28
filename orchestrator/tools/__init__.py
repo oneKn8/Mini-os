@@ -50,6 +50,18 @@ from orchestrator.tools.cross_domain import (
     prepare_for_meeting,
     CROSS_DOMAIN_TOOLS,
 )
+from orchestrator.tools.ui_mapping import (
+    TOOL_UI_CONFIG,
+    SAFE_SETTINGS,
+    SENSITIVE_SETTINGS,
+    get_tool_ui,
+    is_tool_safe,
+    is_tool_reversible,
+    get_tool_page,
+    get_tool_preview_type,
+    is_setting_safe,
+    is_setting_sensitive,
+)
 
 # All available tools for the conversational agent
 ALL_TOOLS = [
@@ -122,4 +134,15 @@ __all__ = [
     "KNOWLEDGE_TOOLS",
     "ACTION_TOOLS",
     "CROSS_DOMAIN_TOOLS_LIST",
+    # UI Mapping
+    "TOOL_UI_CONFIG",
+    "SAFE_SETTINGS",
+    "SENSITIVE_SETTINGS",
+    "get_tool_ui",
+    "is_tool_safe",
+    "is_tool_reversible",
+    "get_tool_page",
+    "get_tool_preview_type",
+    "is_setting_safe",
+    "is_setting_sensitive",
 ]
