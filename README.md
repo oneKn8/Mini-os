@@ -19,7 +19,8 @@
 Multi-agent AI system that automates email triage, calendar management, and daily planning using **LangChain** and **LangGraph** for intelligent agent orchestration.
 
 **Key Features:**
-- Intelligent email classification and prioritization
+- Cursor-style live visual feedback (element highlights, ghost previews, progress timeline)
+- Intelligent email classification and prioritization with drafting
 - Calendar event extraction and proposals
 - AI-powered daily planning
 - Scam detection and safety checks
@@ -135,7 +136,7 @@ stateDiagram-v2
 - `POST /api/actions/{id}/approve` - Approve action
 - `POST /api/chat/message` - Chat with AI assistant
 
-Full API docs: http://localhost:8001/docs
+Full API docs: http://localhost:8101/docs
 
 ---
 
@@ -157,11 +158,19 @@ Full API docs: http://localhost:8001/docs
 ```bash
 # Backend
 pip install -r requirements.txt
-uvicorn backend.api.server:app --reload --port 8001
+uvicorn backend.api.server:app --reload --port 8101
 
 # Frontend
 cd frontend && npm install && npm run dev
 ```
+
+---
+
+## Phase Highlights
+
+- **Phase 1: Performance** – Parallel DAG executor, smart planner with multi-layer caching, loop prevention.
+- **Phase 2: Context** – 126K token context window with auto-compaction and recency preservation.
+- **Phase 3: Visual Feedback** – WebSocket-driven highlights, ghost previews, and progress timeline overlays wired into inbox, calendar, and chat flows.
 
 ---
 
