@@ -16,13 +16,20 @@ set -a
 source .env
 set +a
 
+COMPOSE_FILE_PATH=${COMPOSE_FILE_PATH:-docker-compose.yaml}
+
+if [ ! -f "$COMPOSE_FILE_PATH" ]; then
+    echo "[ERROR] Docker compose file '$COMPOSE_FILE_PATH' not found!"
+    exit 1
+fi
+
 DB_PORT=${DOCKER_DB_PORT:-5643}
 DB_PASSWORD=${POSTGRES_PASSWORD:-changeme}
 API_PORT=${LOCAL_API_PORT:-8101}
 FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
 
 echo "[1/5] Starting PostgreSQL in Docker..."
-if ! docker compose up -d postgres; then
+if ! docker compose -f "$COMPOSE_FILE_PATH" up -d postgres; then
     echo "[ERROR] Failed to start Docker container."
     echo "Make sure Docker is running."
     exit 1
@@ -35,7 +42,7 @@ sleep 5
 MAX_RETRIES=15
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker compose exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
+    if docker compose -f "$COMPOSE_FILE_PATH" exec -T postgres pg_isready -U ops_user -d ops_center > /dev/null 2>&1; then
         echo "[OK] Database is ready!"
         break
     fi

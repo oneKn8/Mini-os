@@ -45,15 +45,20 @@ Multi-agent AI system that automates email triage, calendar management, and dail
    # Edit .env and add your API key
    ```
 
-2. **Start services**
+2. **Start services (local backend/frontend + Dockerized Postgres)**
    ```bash
-   docker-compose up -d
-   docker-compose exec backend-api alembic upgrade head
+   ./start.sh
+   # Stop everything later with: ./stop.sh
    ```
 
 3. **Access**
-   - Frontend: http://localhost:3001
-   - API Docs: http://localhost:8001/docs
+   - Frontend: http://localhost:3101
+   - API Docs: http://localhost:8101/docs
+
+**Docker Compose file selection**
+- By default `./start.sh` uses `docker-compose.yaml` (contains `postgres`, `backend-api`, `frontend` services).
+- If you need to use a different compose file, set `COMPOSE_FILE_PATH`, e.g. `COMPOSE_FILE_PATH=docker-compose.yml ./start.sh`.
+- Ensure the compose file you point at contains the `postgres` service; otherwise start will fail.
 
 ---
 

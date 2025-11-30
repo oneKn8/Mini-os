@@ -12,6 +12,8 @@ if [ -f .env ]; then
     set +a
 fi
 
+COMPOSE_FILE_PATH=${COMPOSE_FILE_PATH:-docker-compose.yaml}
+
 API_PORT=${LOCAL_API_PORT:-8101}
 FRONTEND_PORT=${LOCAL_FRONTEND_PORT:-3101}
 
@@ -59,7 +61,11 @@ pkill -f "vite" 2>/dev/null
 
 echo ""
 echo "Stopping database..."
-docker compose stop postgres
+if [ -f "$COMPOSE_FILE_PATH" ]; then
+    docker compose -f "$COMPOSE_FILE_PATH" stop postgres
+else
+    echo "Compose file '$COMPOSE_FILE_PATH' not found, skipping Docker stop."
+fi
 
 echo ""
 echo "[OK] All services stopped and ports cleared!"
