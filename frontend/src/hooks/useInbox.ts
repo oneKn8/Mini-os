@@ -16,7 +16,8 @@ export function useInboxWithRealtime(filter?: string) {
   }, [sseInboxLastMessage, refetch])
 
   return {
-    items: data || [],
+    items: data?.items || [],
+    nextCursor: data?.next_cursor || null,
     isLoading,
     error,
     refetch,
@@ -24,4 +25,3 @@ export function useInboxWithRealtime(filter?: string) {
     isRefreshing: refreshMutation.isPending,
   }
 }
-

@@ -143,6 +143,37 @@ class ApprovalEvent(AgentEvent):
     auto_approve: bool = False
 
 
+class HighlightEvent(AgentEvent):
+    """Visual element highlighting."""
+
+    type: str = "highlight"
+    selector: str  # CSS selector
+    state: str  # thinking, working, done, error
+    message: str = ""
+    duration_ms: int = 2000
+    color: Optional[str] = None
+
+
+class GhostPreviewEvent(AgentEvent):
+    """Ghost preview of upcoming change."""
+
+    type: str = "ghost_preview"
+    component_type: str  # email, event, task, etc.
+    data: Dict[str, Any]
+    action: str  # create, update, delete
+    preview_id: str
+    requires_confirmation: bool = True
+
+
+class AnimationEvent(AgentEvent):
+    """UI animation trigger."""
+
+    type: str = "animation"
+    animation_type: str  # fade_in, slide_in, pulse, checkmark, etc.
+    target_selector: str
+    duration_ms: int = 300
+
+
 EVENT_TYPE_MAP = {
     "reasoning": ReasoningEvent,
     "tool_execution": ToolExecutionEvent,
@@ -156,6 +187,9 @@ EVENT_TYPE_MAP = {
     "error": ErrorEvent,
     "message": MessageEvent,
     "approval_required": ApprovalEvent,
+    "highlight": HighlightEvent,
+    "ghost_preview": GhostPreviewEvent,
+    "animation": AnimationEvent,
 }
 
 

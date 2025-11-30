@@ -6,6 +6,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from backend.api.database import get_db
@@ -79,6 +80,49 @@ async def trigger_sync(provider: Optional[str] = None, db: Session = Depends(get
     except Exception as e:
         logger.error(f"Sync failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
+
+
+class ResyncGmailRequest(BaseModel):
+    limit: int = 100
+    newer_than_days: int = 365
+
+
+@router.post("/resync-gmail")
+async def resync_gmail(request: ResyncGmailRequest, db: Session = Depends(get_db)):
+    """
+    Re-fetch existing Gmail items to backfill full HTML bodies and metadata.
+    Dev/ops endpoint; not exposed in UI.
+    """
+    user = db.query(User).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="No user found")
+
+    account = (
+        db.query(ConnectedAccount)
+        .filter(
+            ConnectedAccount.user_id == user.id,
+            ConnectedAccount.provider == "gmail",
+            ConnectedAccount.status == "active",
+        )
+        .first()
+    )
+    if not account:
+        raise HTTPException(status_code=404, detail="No active Gmail account found")
+
+    sync_service = SyncService(db)
+    try:
+        updated = sync_service.resync_gmail_items(
+            account,
+            limit=request.limit,
+            newer_than_days=request.newer_than_days,
+        )
+        return {
+            "status": "completed",
+            "updated": updated,
+        }
+    except Exception as e:
+        logger.error(f"Gmail resync failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gmail resync failed: {str(e)}")
 
 
 @router.post("/refresh-inbox")

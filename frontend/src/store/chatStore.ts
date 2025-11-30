@@ -294,10 +294,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 const sc = useScreenController.getState()
                 sc.showThought(event.content, event.cursor)
             } else if (event.type === 'preview') {
-                // Preview for ghost elements on pages
+                // Preview for ghost elements on pages (use stable ID if provided)
                 const sc = useScreenController.getState()
+                const previewId =
+                  event.preview_id ||
+                  (event.data && event.data.id) ||
+                  `preview-${Date.now()}`
+
                 sc.addPreview({
-                    id: `preview-${Date.now()}`,
+                    id: previewId,
                     type: event.preview_type,
                     page: event.page,
                     data: event.data,
@@ -313,6 +318,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 set((state) => ({
                     pendingApprovals: [...state.pendingApprovals, ...event.proposals]
                 }))
+
+                // Auto-navigate to inbox for email drafts
+                const emailDrafts = event.proposals?.filter((p: any) => p.action_type === 'create_email_draft')
+                if (emailDrafts && emailDrafts.length > 0) {
+                    window.dispatchEvent(new CustomEvent('chat-navigate', { detail: '/inbox' }))
+                }
             } else if (event.type === 'message') {
                  const assistantMessage: ChatMessage = {
                     id: Date.now().toString(),

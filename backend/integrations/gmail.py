@@ -18,6 +18,69 @@ SCOPES = [
 ]
 
 
+def _parse_ics(ics_text: str) -> Dict:
+    """
+    Minimal ICS parser to pull out key invite fields.
+    - Handles unfolded lines (basic folding).
+    - Extracts SUMMARY, LOCATION, STATUS, DTSTART, DTEND, DESCRIPTION, URL, ATTENDEE.
+    - Returns raw strings; date parsing is done best-effort (ISO if possible).
+    """
+    if not ics_text:
+        return {}
+
+    # Unfold lines (lines starting with space are continuations)
+    lines: List[str] = []
+    for raw in ics_text.splitlines():
+        if raw.startswith(" ") and lines:
+            lines[-1] += raw.strip()
+        else:
+            lines.append(raw.strip())
+
+    def parse_datetime(value: str) -> Optional[str]:
+        # Basic ISO-like conversion; many invites use YYYYMMDDTHHMMSSZ
+        try:
+            if value.endswith("Z"):
+                return datetime.strptime(value, "%Y%m%dT%H%M%SZ").isoformat() + "Z"
+            # Fallback to naive datetime
+            return datetime.strptime(value, "%Y%m%dT%H%M%S").isoformat()
+        except Exception:
+            return value  # return raw if unknown format
+
+    result: Dict[str, object] = {
+        "attendees": [],
+    }
+
+    for line in lines:
+        if ":" not in line:
+            continue
+        name_part, value = line.split(":", 1)
+        name = name_part.split(";")[0].upper().strip()
+        val = value.strip()
+
+        if name == "SUMMARY":
+            result["summary"] = val
+        elif name == "LOCATION":
+            result["location"] = val
+        elif name == "STATUS":
+            result["status"] = val
+        elif name == "DESCRIPTION":
+            result["description"] = val
+        elif name == "URL":
+            result["url"] = val
+        elif name == "DTSTART":
+            result["start"] = parse_datetime(val)
+        elif name == "DTEND":
+            result["end"] = parse_datetime(val)
+        elif name == "ATTENDEE":
+            # Extract email from mailto if present
+            email = val
+            if val.lower().startswith("mailto:"):
+                email = val[7:]
+            result["attendees"].append(email)
+
+    return result
+
+
 class GmailClient:
     """Gmail API client with OAuth authentication."""
 
@@ -74,27 +137,39 @@ class GmailClient:
 
         return cls(credentials)
 
-    def fetch_messages(self, max_results: int = 50, query: str = "") -> List[Dict]:
+    def fetch_messages(
+        self,
+        max_results: int = 50,
+        query: str = "",
+        page_token: Optional[str] = None,
+    ) -> Dict[str, object]:
         """
         Fetch recent emails.
 
         Args:
             max_results: Maximum number of emails to fetch
             query: Gmail search query (e.g., "is:unread")
+            page_token: Optional page token for pagination
 
         Returns:
-            List of message dictionaries with normalized fields
+            Dict with messages list and next_page_token (if any)
         """
         if not self.service:
             raise ValueError("Gmail service not initialized")
 
         try:
             # List message IDs
-            results = self.service.users().messages().list(userId="me", maxResults=max_results, q=query).execute()
+            list_kwargs: Dict[str, object] = {"userId": "me", "maxResults": max_results}
+            if query:
+                list_kwargs["q"] = query
+            if page_token:
+                list_kwargs["pageToken"] = page_token
+
+            results = self.service.users().messages().list(**list_kwargs).execute()
 
             messages = results.get("messages", [])
             if not messages:
-                return []
+                return {"messages": [], "next_page_token": None}
 
             # Fetch full message details
             detailed_messages = []
@@ -102,10 +177,20 @@ class GmailClient:
                 msg_data = self.service.users().messages().get(userId="me", id=msg["id"], format="full").execute()
                 detailed_messages.append(self._normalize_message(msg_data))
 
-            return detailed_messages
+            return {
+                "messages": detailed_messages,
+                "next_page_token": results.get("nextPageToken"),
+            }
 
         except Exception as e:
             raise Exception(f"Error fetching Gmail messages: {e}")
+
+    def fetch_message_by_id(self, message_id: str) -> Dict:
+        """Fetch a single message by ID and normalize it."""
+        if not self.service:
+            raise ValueError("Gmail service not initialized")
+        msg_data = self.service.users().messages().get(userId="me", id=message_id, format="full").execute()
+        return self._normalize_message(msg_data)
 
     def _normalize_message(self, msg_data: Dict) -> Dict:
         """
@@ -119,12 +204,16 @@ class GmailClient:
         """
         headers = {h["name"]: h["value"] for h in msg_data["payload"].get("headers", [])}
 
-        # Extract body
+        # Extract body variants and calendar data
         body_preview = msg_data.get("snippet", "")
-        body_full = self._extract_body(msg_data["payload"])
+        bodies = self._extract_bodies(msg_data["payload"])
+        body_full = bodies.get("html") or bodies.get("text") or ""
+        calendar_raw = bodies.get("calendar") or ""
+        calendar_parsed = _parse_ics(calendar_raw) if calendar_raw else {}
 
-        return {
+        normalized = {
             "source_id": msg_data["id"],
+            "thread_id": msg_data.get("threadId"),
             "title": headers.get("Subject", "(No Subject)"),
             "body_preview": body_preview,
             "body_full": body_full,
@@ -136,27 +225,60 @@ class GmailClient:
                     "message_id": msg_data["id"],
                     "thread_id": msg_data.get("threadId"),
                     "labels": msg_data.get("labelIds", []),
+                    "calendar_body": calendar_raw or None,
+                    "calendar_parsed": calendar_parsed or None,
                 }
             },
         }
 
-    def _extract_body(self, payload: Dict) -> str:
-        """Extract email body from message payload."""
-        if "body" in payload and payload["body"].get("data"):
-            import base64
+        return normalized
 
-            return base64.urlsafe_b64decode(payload["body"]["data"]).decode("utf-8", errors="ignore")
+    def _extract_bodies(self, payload: Dict) -> Dict[str, Optional[str]]:
+        """Extract text/html, text/plain, and text/calendar bodies from a message payload."""
+        import base64
 
-        # Check parts for multipart messages
-        if "parts" in payload:
-            for part in payload["parts"]:
-                if part["mimeType"] == "text/plain":
-                    if part["body"].get("data"):
-                        import base64
+        html_parts: List[str] = []
+        text_parts: List[str] = []
+        calendar_parts: List[str] = []
 
-                        return base64.urlsafe_b64decode(part["body"]["data"]).decode("utf-8", errors="ignore")
+        def decode_body(part: Dict) -> str:
+            data = part.get("body", {}).get("data")
+            if not data:
+                return ""
+            try:
+                return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+            except Exception:
+                return ""
 
-        return ""
+        def walk(part: Dict):
+            mime = (part.get("mimeType") or "").lower()
+
+            if mime.startswith("text/html"):
+                content = decode_body(part)
+                if content:
+                    html_parts.append(content)
+            elif mime.startswith("text/plain"):
+                content = decode_body(part)
+                if content:
+                    text_parts.append(content)
+            elif mime.startswith("text/calendar"):
+                content = decode_body(part)
+                if content:
+                    calendar_parts.append(content)
+
+            # Recurse into child parts
+            for child in part.get("parts", []) or []:
+                walk(child)
+
+        walk(payload)
+
+        bodies: Dict[str, Optional[str]] = {
+            "html": html_parts[0] if html_parts else None,
+            "text": text_parts[0] if text_parts else None,
+            "calendar": calendar_parts[0] if calendar_parts else None,
+        }
+
+        return bodies
 
     def create_draft(self, to: str, subject: str, body: str) -> Dict:
         """

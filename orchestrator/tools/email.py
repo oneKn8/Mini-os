@@ -22,6 +22,10 @@ class CreateEmailDraftOutput(BaseModel):
     message: str = Field(description="Human-friendly status message")
     requires_approval: bool = Field(default=True, description="Whether this action needs approval")
     proposal_id: Optional[str] = Field(default=None, description="ID of the ActionProposal if created")
+    # Echo back draft contents so the UI can show a live preview without re-querying the DB
+    to: Optional[str] = Field(default=None, description="Recipient email address for the draft")
+    subject: Optional[str] = Field(default=None, description="Subject line for the draft")
+    body: Optional[str] = Field(default=None, description="Body content for the draft")
 
 
 def _get_db_session():
@@ -83,6 +87,9 @@ def create_email_draft(to: str, subject: str, body: str, provider: str = "gmail"
                 message="Draft created and waiting for your approval.",
                 requires_approval=True,
                 proposal_id=str(proposal.id),
+                to=to,
+                subject=subject,
+                body=body,
             )
 
         finally:

@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingSpinner from './components/UI/LoadingSpinner'
 import PageTransition from './components/Animations/PageTransition'
+import { ElementHighlight, GhostPreview } from './components/VisualFeedback'
 
 // Lazy load pages for code splitting
 const DashboardView = lazy(() => import('./pages/DashboardView'))
@@ -26,6 +27,10 @@ function App() {
           v7_relativeSplatPath: true,
         }}
       >
+        {/* Visual feedback overlays */}
+        <ElementHighlight />
+        <GhostPreview />
+
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />

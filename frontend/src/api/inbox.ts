@@ -8,6 +8,8 @@ const api = axios.create({
 export interface InboxItem {
   id: string
   source_type: string
+  thread_id?: string
+  message_count?: number
   title: string
   body_preview: string
   sender?: string
@@ -17,14 +19,37 @@ export interface InboxItem {
   due_datetime?: string
   suggested_action?: string
   read?: boolean
+  gmail_category?: string
+  folder?: string
+  gmail_labels?: string[]
 }
 
-export async function fetchInboxItems(filter?: string): Promise<InboxItem[]> {
-  const response = await api.get('/inbox', { params: filter ? { filter } : {} })
+export async function fetchInboxItems(params?: {
+  filter?: string
+  cursor?: string | null
+  pageSize?: number
+}): Promise<{ items: InboxItem[]; next_cursor: string | null }> {
+  const response = await api.get('/inbox', {
+    params: {
+      ...(params?.filter ? { filter: params.filter } : {}),
+      ...(params?.cursor ? { cursor: params.cursor } : {}),
+      ...(params?.pageSize ? { page_size: params.pageSize } : { page_size: 200 }),
+    }
+  })
   return response.data
 }
 
-export async function fetchInboxItem(itemId: string): Promise<InboxItem & { body_full?: string; labels?: string[] }> {
+export async function fetchInboxItem(
+  itemId: string
+): Promise<
+  InboxItem & {
+    body_full?: string
+    labels?: string[]
+    gmail?: { message_id?: string; thread_id?: string }
+    gmail_labels?: string[]
+    calendar?: any
+  }
+> {
   const response = await api.get(`/inbox/${itemId}`)
   return response.data
 }
@@ -33,7 +58,7 @@ export async function fetchInboxItem(itemId: string): Promise<InboxItem & { body
 export function useInbox(filter?: string) {
   return useQuery({
     queryKey: ['inbox', filter],
-    queryFn: () => fetchInboxItems(filter),
+    queryFn: () => fetchInboxItems({ filter }),
     refetchInterval: 30000, // Refetch every 30 seconds
   })
 }
@@ -60,4 +85,3 @@ export function useRefreshInbox() {
     },
   })
 }
-

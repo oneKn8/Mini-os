@@ -144,7 +144,7 @@ export default function TodayView() {
 
         {/* Priorities */}
         {plan?.priorities && plan.priorities.length > 0 && (
-            <motion.div 
+            <motion.div
                 variants={container}
                 initial="hidden"
                 animate="show"
@@ -153,8 +153,8 @@ export default function TodayView() {
                     <Zap size={20} className="text-accent-warning" />
                     <h2 className="text-lg font-semibold text-text-primary">Top Priorities</h2>
                 </div>
-                
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+
+                <div data-component="priority-list" className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     {plan.priorities.map((priority, idx) => (
                         <motion.div
                             key={idx}
@@ -178,7 +178,7 @@ export default function TodayView() {
 
         {/* Schedule */}
         {plan?.time_blocks && plan.time_blocks.length > 0 ? (
-             <motion.div 
+             <motion.div
                 variants={container}
                 initial="hidden"
                 animate="show"
@@ -189,7 +189,7 @@ export default function TodayView() {
                     <h2 className="text-lg font-semibold text-text-primary">Today's Schedule</h2>
                 </div>
 
-                <div className="relative space-y-0">
+                <div data-component="daily-plan" className="relative space-y-0">
                     {/* Timeline line */}
                     <div className="absolute left-8 top-4 bottom-4 w-px bg-border-medium/50 hidden md:block"></div>
 

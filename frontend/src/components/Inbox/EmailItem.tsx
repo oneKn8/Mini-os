@@ -7,25 +7,6 @@ interface EmailItemProps {
   onClick: () => void
 }
 
-// Importance indicator - subtle dots
-const ImportanceDot = ({ level }: { level: string }) => {
-  const colors: Record<string, string> = {
-    critical: 'bg-red-400',
-    high: 'bg-amber-400',
-    medium: 'bg-blue-400',
-    low: 'bg-zinc-500',
-    ignore: 'bg-zinc-700',
-  }
-  return <div className={clsx("w-1.5 h-1.5 rounded-full flex-shrink-0", colors[level] || 'bg-zinc-600')} />
-}
-
-// Category colors
-const categoryColors: Record<string, string> = {
-  work: 'text-blue-400',
-  personal: 'text-violet-400',
-  finance: 'text-emerald-400',
-}
-
 // Format relative time
 const formatTime = (dateStr: string) => {
   const date = new Date(dateStr)
@@ -40,64 +21,117 @@ const formatTime = (dateStr: string) => {
 
 export default function EmailItem({ item, isSelected, onClick }: EmailItemProps) {
   const isUnread = !item.read
+  const messageCount = item.message_count || 1
+  const folder = item.folder || 'inbox'
+  const gmailCategory = item.gmail_category || 'primary'
+
+  const chipLabel =
+    folder && folder !== 'inbox'
+      ? folder === 'spam'
+        ? 'Spam'
+        : folder === 'trash'
+          ? 'Trash'
+          : folder === 'sent'
+            ? 'Sent'
+            : folder === 'drafts'
+              ? 'Draft'
+              : folder.charAt(0).toUpperCase() + folder.slice(1)
+      : gmailCategory && gmailCategory !== 'primary'
+        ? gmailCategory.charAt(0).toUpperCase() + gmailCategory.slice(1)
+        : null
+
+  const chipClass =
+    folder === 'spam'
+      ? 'bg-red-500/15 text-red-300 border-red-500/30'
+      : folder === 'trash'
+        ? 'bg-zinc-800/60 text-zinc-300 border-zinc-700'
+        : folder === 'sent'
+          ? 'bg-zinc-700/60 text-zinc-200 border-zinc-600'
+          : gmailCategory === 'promotions'
+            ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+            : gmailCategory === 'social'
+              ? 'bg-violet-500/15 text-violet-300 border-violet-500/30'
+              : gmailCategory === 'updates'
+                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                : gmailCategory === 'forums'
+                  ? 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                  : 'bg-zinc-800/60 text-zinc-300 border-zinc-700'
 
   return (
     <div
       data-email-item={item.id}
       onClick={onClick}
       className={clsx(
-        "group cursor-pointer p-3 rounded-lg border transition-all duration-200",
+        "group cursor-pointer px-4 py-2.5 border-b border-zinc-800/50 transition-all duration-150",
         isSelected
-          ? "bg-zinc-800/50 border-zinc-700"
-          : "bg-zinc-900/30 border-zinc-800/30 hover:bg-zinc-800/30 hover:border-zinc-800"
+          ? "bg-blue-500/10 border-l-2 border-l-blue-500"
+          : "hover:bg-zinc-800/30 border-l-2 border-l-transparent",
+        isUnread && !isSelected && "bg-zinc-900/60"
       )}
     >
-      {/* Top row: sender + time */}
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-2 min-w-0">
-          <ImportanceDot level={item.importance} />
+      {/* Single row: unread dot + sender + chips + count + time */}
+      <div className="flex items-center gap-2 mb-0.5">
+        {/* Unread indicator */}
+        {isUnread && (
+          <div className="w-2.5 h-2.5 rounded-full bg-blue-500 flex-shrink-0" />
+        )}
+
+        {/* Sender - Gmail style bold for unread */}
+        <span className={clsx(
+          "text-sm truncate min-w-[120px] max-w-[200px]",
+          isUnread ? "font-bold text-zinc-100" : "font-normal text-zinc-500"
+        )}>
+          {item.sender || 'Unknown'}
+        </span>
+
+        {/* Subject - Gmail style bold for unread */}
+        <h3 className={clsx(
+          "text-sm truncate flex-1 min-w-0",
+          isUnread ? "font-bold text-zinc-100" : "font-normal text-zinc-400"
+        )}>
+          {item.title}
+        </h3>
+
+        {/* Message count for threads */}
+        {messageCount > 1 && (
           <span className={clsx(
-            "text-sm truncate",
-            isUnread ? "font-medium text-zinc-200" : "text-zinc-400"
+            "text-[11px] px-1.5 py-0.5 rounded-md flex-shrink-0",
+            isUnread
+              ? "bg-zinc-700/80 text-zinc-200 font-semibold border border-zinc-600"
+              : "bg-zinc-800/60 text-zinc-400 border border-zinc-700"
           )}>
-            {item.sender || 'Unknown'}
+            ({messageCount})
           </span>
-          {isUnread && (
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
-          )}
-        </div>
-        <span className="text-[10px] text-zinc-600 flex-shrink-0">
+        )}
+
+        {/* Category/folder chip - more subtle */}
+        {chipLabel && (
+          <span
+            className={clsx(
+              "inline-flex items-center px-1.5 py-0.5 rounded-md border text-[10px] font-medium flex-shrink-0",
+              chipClass
+            )}
+          >
+            {chipLabel}
+          </span>
+        )}
+
+        {/* Time - more compact */}
+        <span className={clsx(
+          "text-xs flex-shrink-0 min-w-[45px] text-right",
+          isUnread ? "text-zinc-400 font-medium" : "text-zinc-500"
+        )}>
           {formatTime(item.received_at)}
         </span>
       </div>
 
-      {/* Subject */}
-      <h3 className={clsx(
-        "text-sm mb-1 truncate",
-        isUnread ? "text-zinc-200" : "text-zinc-400"
+      {/* Preview - more subtle, Gmail style */}
+      <p className={clsx(
+        "text-xs line-clamp-1 pl-5",
+        isUnread ? "text-zinc-400" : "text-zinc-600"
       )}>
-        {item.title}
-      </h3>
-
-      {/* Preview */}
-      <p className="text-xs text-zinc-600 line-clamp-2 mb-2">
         {item.body_preview}
       </p>
-
-      {/* Category tag */}
-      <div className="flex items-center gap-2">
-        <span className={clsx(
-          "text-[10px] capitalize",
-          categoryColors[item.category] || 'text-zinc-500'
-        )}>
-          {item.category}
-        </span>
-        {item.suggested_action && (
-          <span className="text-[10px] text-amber-500/70 truncate">
-            • {item.suggested_action}
-          </span>
-        )}
-      </div>
     </div>
   )
 }

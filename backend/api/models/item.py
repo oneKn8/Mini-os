@@ -19,6 +19,7 @@ class Item(Base, UUIDMixin, TimestampMixin):
     source_provider = Column(String(50), nullable=False)  # gmail, outlook, google_calendar
     source_account_id = Column(UUID(as_uuid=True), ForeignKey("connected_accounts.id", ondelete="SET NULL"))
     source_id = Column(String(255), nullable=False)  # Provider's ID
+    thread_id = Column(String(255), index=True)  # Conversation/thread identifier (e.g., Gmail threadId)
     title = Column(String(500))
     body_preview = Column(Text)
     body_full = Column(Text)
@@ -28,6 +29,7 @@ class Item(Base, UUIDMixin, TimestampMixin):
     end_datetime = Column(DateTime)
     received_datetime = Column(DateTime, index=True)
     raw_metadata = Column(JSONB)
+    is_read = Column(Boolean, default=False, index=True)
     is_archived = Column(Boolean, default=False, index=True)
 
     # Relationships

@@ -7,6 +7,7 @@ instead of rigid keyword-based intent detection.
 
 import json
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -29,6 +30,17 @@ from orchestrator.tools.ui_mapping import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Feature flag for enhanced agent (Phase 1 improvements)
+USE_ENHANCED_AGENT = os.getenv("USE_ENHANCED_AGENT", "false").lower() == "true"
+
+if USE_ENHANCED_AGENT:
+    try:
+        from orchestrator.enhanced_agent import EnhancedConversationalAgent
+        logger.info("Enhanced agent enabled - using parallel execution and caching")
+    except ImportError:
+        logger.warning("Enhanced agent not available, falling back to standard agent")
+        USE_ENHANCED_AGENT = False
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -243,7 +255,7 @@ class ChatService:
 
     def _get_agent(
         self, model_provider: Optional[str] = None, model_name: Optional[str] = None
-    ) -> ConversationalAgent:
+    ):
         """Get or create the conversational agent with optional model overrides."""
         # Create cache key from model settings
         cache_key = f"{model_provider or 'default'}:{model_name or 'default'}"
@@ -253,10 +265,20 @@ class ChatService:
             return self._agent_cache[cache_key]
 
         # Create new agent with model overrides
-        agent = ConversationalAgent(
-            model_provider=model_provider,
-            model_name=model_name,
-        )
+        if USE_ENHANCED_AGENT:
+            agent = EnhancedConversationalAgent(
+                model_provider=model_provider,
+                model_name=model_name,
+                enable_caching=True,
+                enable_parallel=True,
+            )
+            logger.info(f"Created enhanced agent: {cache_key}")
+        else:
+            agent = ConversationalAgent(
+                model_provider=model_provider,
+                model_name=model_name,
+            )
+
         self._agent_cache[cache_key] = agent
         return agent
 
@@ -425,13 +447,29 @@ class ChatService:
                     # Check if this tool generates a preview
                     preview_type = get_tool_preview_type(tool_name)
                     if preview_type:
+                        preview_id = None
+                        preview_data = tool_result
+
+                        # Special handling for email drafts so we can show the actual draft content
+                        if tool_name == "create_email_draft":
+                            proposal_id = tool_result.get("proposal_id")
+                            preview_id = proposal_id
+                            preview_data = {
+                                "id": proposal_id,
+                                "to": tool_result.get("to"),
+                                "subject": tool_result.get("subject"),
+                                "body": tool_result.get("body"),
+                                "mode": "new",
+                            }
+
                         yield {
                             "type": "preview",
                             "preview_type": preview_type,
                             "page": tool_ui.get("page"),
-                            "data": tool_result,
+                            "data": preview_data,
                             "cursor": tool_ui.get("cursor"),
                             "safe": is_tool_safe(tool_name),
+                            **({"preview_id": preview_id} if preview_id else {}),
                         }
 
                     yield {
@@ -638,9 +676,14 @@ class ChatService:
                         event["requires_approval"] = len(assessed_proposals) > 0
                         event["auto_approved_count"] = auto_approved_count
 
+                    import re
+                    content = event.get("content", "")
+                    # Strip any literal tool-call artifacts like <function=...>...</function>
+                    content = re.sub(r"<function[^>]*>.*?</function>", "", content, flags=re.DOTALL).strip()
+
                     yield {
                         "type": "message",
-                        "content": event.get("content", ""),
+                        "content": content,
                         "metadata": {
                             "tools_used": event.get("tools_used", []),
                             "requires_approval": event.get("requires_approval", False),

@@ -14,6 +14,9 @@ from orchestrator.events import (
     ToolExecutionEvent,
     ProgressEvent,
     AgentStatusEvent,
+    HighlightEvent,
+    GhostPreviewEvent,
+    AnimationEvent,
     event_to_dict,
 )
 
@@ -142,6 +145,90 @@ class AgentStreamingSession:
             capabilities=capabilities or [],
             tools=tools or [],
             message=message,
+        )
+        return await self.emit_event(event)
+
+    async def emit_highlight(
+        self,
+        selector: str,
+        state: str,
+        message: str = "",
+        duration_ms: int = 2000,
+        color: str = None,
+    ) -> Dict:
+        """
+        Emit element highlight event.
+
+        Args:
+            selector: CSS selector for element to highlight
+            state: Visual state (thinking, working, done, error)
+            message: Optional message to display
+            duration_ms: How long to show highlight
+            color: Optional color override
+
+        Returns:
+            Event dictionary
+        """
+        event = HighlightEvent(
+            selector=selector,
+            state=state,
+            message=message,
+            duration_ms=duration_ms,
+            color=color,
+        )
+        return await self.emit_event(event)
+
+    async def emit_ghost_preview(
+        self,
+        component_type: str,
+        data: Dict,
+        action: str,
+        preview_id: str,
+        requires_confirmation: bool = True,
+    ) -> Dict:
+        """
+        Emit ghost preview event for upcoming change.
+
+        Args:
+            component_type: Type of component (email, event, task, etc.)
+            data: Preview data
+            action: Action type (create, update, delete)
+            preview_id: Unique ID for this preview
+            requires_confirmation: Whether user must confirm
+
+        Returns:
+            Event dictionary
+        """
+        event = GhostPreviewEvent(
+            component_type=component_type,
+            data=data,
+            action=action,
+            preview_id=preview_id,
+            requires_confirmation=requires_confirmation,
+        )
+        return await self.emit_event(event)
+
+    async def emit_animation(
+        self,
+        animation_type: str,
+        target_selector: str,
+        duration_ms: int = 300,
+    ) -> Dict:
+        """
+        Emit animation event.
+
+        Args:
+            animation_type: Type of animation (fade_in, slide_in, pulse, checkmark, etc.)
+            target_selector: CSS selector for target element
+            duration_ms: Animation duration
+
+        Returns:
+            Event dictionary
+        """
+        event = AnimationEvent(
+            animation_type=animation_type,
+            target_selector=target_selector,
+            duration_ms=duration_ms,
         )
         return await self.emit_event(event)
 

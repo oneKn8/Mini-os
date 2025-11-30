@@ -7,6 +7,7 @@ Enhanced with RAG indexing for semantic search capabilities.
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from datetime import timedelta
 
 from sqlalchemy.orm import Session
 
@@ -223,39 +224,56 @@ class SyncService:
             client_secret=client_secret,
         )
 
-        messages = client.fetch_messages(max_results=50)
-        count = 0
+        target_count = 500
+        synced = 0
         new_items = []
+        page_token = None
+        query = "newer_than:365d"
 
-        for msg in messages:
-            existing = (
-                self.db.query(Item)
-                .filter(
-                    Item.user_id == account.user_id,
-                    Item.source_id == msg["source_id"],
-                    Item.source_provider == "gmail",
-                )
-                .first()
-            )
+        while synced < target_count:
+            batch = client.fetch_messages(max_results=100, query=query, page_token=page_token)
+            messages = batch.get("messages", [])
+            page_token = batch.get("next_page_token")
 
-            if not existing:
-                item = Item(
-                    user_id=account.user_id,
-                    source_type="email",
-                    source_provider="gmail",
-                    source_account_id=account.id,
-                    source_id=msg["source_id"],
-                    title=msg["title"],
-                    body_preview=msg["body_preview"],
-                    body_full=msg["body_full"],
-                    sender=msg["sender"],
-                    recipients=msg["recipients"],
-                    received_datetime=msg["received_datetime"],
-                    raw_metadata=msg["raw_metadata"],
+            if not messages:
+                break
+
+            for msg in messages:
+                existing = (
+                    self.db.query(Item)
+                    .filter(
+                        Item.user_id == account.user_id,
+                        Item.source_id == msg["source_id"],
+                        Item.source_provider == "gmail",
+                    )
+                    .first()
                 )
-                self.db.add(item)
-                new_items.append(item)
-                count += 1
+
+                if not existing:
+                    item = Item(
+                        user_id=account.user_id,
+                        source_type="email",
+                        source_provider="gmail",
+                        source_account_id=account.id,
+                        source_id=msg["source_id"],
+                        thread_id=msg.get("thread_id"),
+                        title=msg["title"],
+                        body_preview=msg["body_preview"],
+                        body_full=msg["body_full"],
+                        sender=msg["sender"],
+                        recipients=msg["recipients"],
+                        received_datetime=msg["received_datetime"],
+                        raw_metadata=msg["raw_metadata"],
+                    )
+                    self.db.add(item)
+                    new_items.append(item)
+                    synced += 1
+
+                if synced >= target_count:
+                    break
+
+            if not page_token:
+                break
 
         self.db.commit()
 
@@ -266,12 +284,74 @@ class SyncService:
         # Index new items for RAG
         if new_items:
             indexed = self._index_items(new_items)
-            logger.info(f"Gmail sync: {count} new emails, {indexed} indexed for search")
+            logger.info(f"Gmail sync: {synced} new emails, {indexed} indexed for search")
 
         account.last_sync_at = datetime.utcnow()
         self.db.commit()
 
-        return count
+        return synced
+
+    def resync_gmail_items(self, account: ConnectedAccount, limit: int = 100, newer_than_days: Optional[int] = 365) -> int:
+        """
+        Re-fetch and update existing Gmail items to backfill HTML bodies and metadata.
+        """
+        # Get client credentials from scopes JSONB or env vars
+        if account.scopes and isinstance(account.scopes, dict):
+            client_id = account.scopes.get("client_id")
+            client_secret = account.scopes.get("client_secret")
+        else:
+            import os
+            import json
+
+            gmail_secret_path = os.getenv("GMAIL_CLIENT_SECRET_PATH")
+            if gmail_secret_path and os.path.exists(gmail_secret_path):
+                with open(gmail_secret_path) as f:
+                    creds_data = json.load(f)
+                    client_id = creds_data["installed"]["client_id"]
+                    client_secret = creds_data["installed"]["client_secret"]
+            else:
+                raise ValueError("Gmail client credentials not found")
+
+        client = GmailClient.from_tokens(
+            access_token=account.access_token,
+            refresh_token=account.refresh_token,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+
+        query = self.db.query(Item).filter(
+            Item.user_id == account.user_id,
+            Item.source_provider == "gmail",
+            Item.source_account_id == account.id,
+        )
+
+        if newer_than_days:
+            cutoff = datetime.utcnow() - timedelta(days=newer_than_days)
+            query = query.filter(Item.received_datetime != None, Item.received_datetime > cutoff)
+
+        items = query.order_by(Item.received_datetime.desc()).limit(limit).all()
+
+        updated = 0
+        for item in items:
+            try:
+                msg = client.fetch_message_by_id(item.source_id)
+                item.body_full = msg["body_full"]
+                item.body_preview = msg["body_preview"]
+                item.raw_metadata = msg["raw_metadata"]
+                item.title = msg["title"]
+                item.sender = msg["sender"]
+                item.recipients = msg["recipients"]
+                item.received_datetime = msg["received_datetime"]
+                item.thread_id = msg.get("thread_id")
+                updated += 1
+            except Exception as e:
+                logger.error(f"Failed to resync message {item.source_id}: {e}")
+
+        self.db.commit()
+        if updated:
+            logger.info(f"Resynced {updated} Gmail items for account {account.id}")
+        return updated
 
     def sync_outlook(self, account: ConnectedAccount) -> int:
         """Sync emails from Outlook account."""

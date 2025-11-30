@@ -26,7 +26,7 @@ export default function EmailList({ items, selectedId, onSelect }: EmailListProp
   }, [items.length])
 
   return (
-    <div ref={listRef} className="flex-1 flex flex-col gap-3 overflow-y-auto pr-2 no-scrollbar">
+    <div ref={listRef} className="flex-1 min-h-0 flex flex-col gap-0.5 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent pr-1">
       {items.map((item) => (
         <EmailItem
           key={item.id}
