@@ -127,7 +127,7 @@ def get_todays_events() -> CalendarEventOutput:
             try:
                 start_dt = datetime.fromisoformat(event.start)
                 summary += f" {event.title} at {start_dt.strftime('%I:%M %p')}."
-            except:
+            except Exception:
                 pass
 
     return CalendarEventOutput(events=events, summary=summary, date_range=f"Today ({now.strftime('%B %d, %Y')})")
@@ -170,7 +170,7 @@ def get_upcoming_events(days_ahead: int = 7, limit: int = 20) -> CalendarEventOu
             try:
                 day = datetime.fromisoformat(e["start"]).strftime("%A")
                 events_by_day[day] = events_by_day.get(day, 0) + 1
-            except:
+            except Exception:
                 pass
 
     if not events:

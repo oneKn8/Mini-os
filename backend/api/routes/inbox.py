@@ -80,7 +80,7 @@ async def get_inbox_items(
         return "inbox"
 
     # Base query and importance-based filtering
-    query = db.query(Item).options(joinedload(Item.agent_metadata)).filter(Item.is_archived == False)
+    query = db.query(Item).options(joinedload(Item.agent_metadata)).filter(Item.is_archived.is_(False))
 
     if filter == "critical":
         query = query.join(ItemAgentMetadata).filter(ItemAgentMetadata.importance == "critical")

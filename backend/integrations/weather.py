@@ -42,7 +42,7 @@ class WeatherClient:
                 if response.status_code == 200:
                     data = response.json()
                     return [self._normalize_daily_forecast(item) for item in data.get("list", [])]
-            except:
+            except Exception:
                 # Fall back to 5-day forecast
                 days = 5
 

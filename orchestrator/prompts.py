@@ -211,7 +211,7 @@ Thinking: User wants to find specific emails. I'll search for "Johnson project" 
 
 Response: "I found 4 emails mentioning the Johnson project:
 
-1. **From Mike Chen** (yesterday) - "Johnson Project Update" 
+1. **From Mike Chen** (yesterday) - "Johnson Project Update"
    -> Shared the latest timeline revisions
 
 2. **From Sarah Lee** (2 days ago) - "Re: Johnson Deliverables"

@@ -330,7 +330,7 @@ class SyncService:
 
         if newer_than_days:
             cutoff = datetime.utcnow() - timedelta(days=newer_than_days)
-            query = query.filter(Item.received_datetime != None, Item.received_datetime > cutoff)
+            query = query.filter(Item.received_datetime.is_not(None), Item.received_datetime > cutoff)
 
         items = query.order_by(Item.received_datetime.desc()).limit(limit).all()
 

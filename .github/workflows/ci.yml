@@ -46,8 +46,7 @@ jobs:
     
     - name: Run Flake8
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=GenerativeAIExamples
-        flake8 . --count --max-line-length=119 --extend-ignore=E203,W503 --statistics --exclude=GenerativeAIExamples
+        flake8 . --count --show-source --statistics
     
     - name: Run MyPy type checking
       continue-on-error: true
