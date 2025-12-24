@@ -4,7 +4,7 @@
 
 **An intelligent multi-agent AI system for personal productivity automation**
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![LangChain](https://img.shields.io/badge/LangChain-0.1-yellow.svg)](https://www.langchain.com/)
@@ -163,14 +163,6 @@ uvicorn backend.api.server:app --reload --port 8101
 # Frontend
 cd frontend && npm install && npm run dev
 ```
-
----
-
-## Phase Highlights
-
-- **Phase 1: Performance** – Parallel DAG executor, smart planner with multi-layer caching, loop prevention.
-- **Phase 2: Context** – 126K token context window with auto-compaction and recency preservation.
-- **Phase 3: Visual Feedback** – WebSocket-driven highlights, ghost previews, and progress timeline overlays wired into inbox, calendar, and chat flows.
 
 ---
 

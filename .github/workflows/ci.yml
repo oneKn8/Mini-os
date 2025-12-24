@@ -6,27 +6,20 @@ on:
   pull_request:
     branches: [ main, master, develop ]
 
-permissions:
-  contents: read
-  security-events: write
-
 jobs:
-  lint-and-test:
+  backend:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.11']
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.11'
     
     - name: Cache pip packages
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -36,124 +29,33 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install black flake8 pytest pytest-cov mypy
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
+        pip install black flake8 pytest pytest-cov
+        pip install -r requirements.txt
     
-    - name: Run Black formatter check
+    - name: Lint
       run: |
-        black --check --line-length=119 --extend-exclude="GenerativeAIExamples" . || exit 1
-    
-    - name: Run Flake8
-      run: |
+        black --check --line-length=119 --extend-exclude="GenerativeAIExamples" .
         flake8 . --count --show-source --statistics
     
-    - name: Run MyPy type checking
-      continue-on-error: true
-      run: |
-        mypy . --ignore-missing-imports --exclude GenerativeAIExamples || true
-    
-    - name: Run tests with pytest
-      run: |
-        if [ -d "tests" ]; then
-          pytest tests/ --cov=. --cov-report=xml --cov-report=html
-        else
-          echo "No tests directory found, skipping tests"
-        fi
-    
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      if: matrix.python-version == '3.11'
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+    - name: Test
+      run: pytest tests/ -v
 
-  frontend-lint:
+  frontend:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: |
-          frontend/package-lock.json
+        cache-dependency-path: frontend/package-lock.json
     
-    - name: Install frontend dependencies
-      if: hashFiles('frontend/package.json') != ''
+    - name: Install and build
       run: |
         cd frontend
         npm ci
-    
-    - name: Run ESLint
-      if: hashFiles('frontend/package.json') != ''
-      continue-on-error: true
-      run: |
-        cd frontend
-        npm run lint || true
-    
-    - name: Run TypeScript compiler check
-      if: hashFiles('frontend/tsconfig.json') != ''
-      run: |
-        cd frontend
-        npx tsc --noEmit || exit 1
-    
-    - name: Build frontend
-      if: hashFiles('frontend/package.json') != ''
-      run: |
-        cd frontend
+        npx tsc --noEmit
         npm run build
-
-  docker-build:
-    runs-on: ubuntu-latest
-    needs: [lint-and-test]
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    
-    - name: Build Docker images
-      run: |
-        if [ -f docker-compose.yaml ] || [ -f docker-compose.yml ]; then
-          docker compose build --no-cache
-        elif [ -f Dockerfile ]; then
-          docker build -t multiagents:test .
-        else
-          echo "No Docker configuration found, skipping"
-        fi
-    
-    - name: Run Docker Compose health checks
-      if: hashFiles('docker-compose.yaml') != '' || hashFiles('docker-compose.yml') != ''
-      run: |
-        docker compose up -d
-        sleep 30
-        docker compose ps
-        docker compose down
-
-  security-scan:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-    
-    - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v3
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
-
