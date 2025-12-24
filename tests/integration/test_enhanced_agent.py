@@ -9,11 +9,15 @@ Tests the full pipeline:
 """
 
 import asyncio
+import os
 import pytest
 import time
 from typing import List, Dict, Any
 
 from orchestrator.enhanced_agent import EnhancedConversationalAgent
+
+# Skip all tests in this module if OPENAI_API_KEY is not set
+pytestmark = pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 
 
 @pytest.mark.asyncio

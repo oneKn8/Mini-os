@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import asyncio
+import os
 import pytest
 import time
 
@@ -186,6 +187,7 @@ async def test_smart_planner_l1_fast_path():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 async def test_smart_planner_l2_semantic():
     """Test SmartPlanner uses L2 (semantic) for similar queries."""
     planner = SmartPlanner(enable_semantic_cache=True)
@@ -219,6 +221,7 @@ async def test_smart_planner_l2_semantic():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 async def test_smart_planner_cache_hierarchy():
     """Test that SmartPlanner checks L1 -> L2 -> L3 in order."""
     planner = SmartPlanner(enable_semantic_cache=True)

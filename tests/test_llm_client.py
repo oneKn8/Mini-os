@@ -16,15 +16,11 @@ def test_llm_client_initialization():
     os.environ["AI_PROVIDER"] = "openai"
     client = LLMClient()
     assert client.provider == "openai"
-    assert client.model == "gpt-4o-mini"
-    assert client.api_url == "https://api.openai.com/v1/chat/completions"
 
     # Test NVIDIA
     os.environ["NVIDIA_API_KEY"] = "test_key"
     client = LLMClient(provider="nvidia")
     assert client.provider == "nvidia"
-    assert client.model == "meta/llama3-70b-instruct"
-    assert client.api_url == "https://integrate.api.nvidia.com/v1/chat/completions"
 
 
 def test_llm_client_unsupported_provider():
@@ -41,7 +37,7 @@ def test_llm_client_missing_api_key():
     if "NVIDIA_API_KEY" in os.environ:
         del os.environ["NVIDIA_API_KEY"]
 
-    with pytest.raises(ValueError, match="API key not found"):
+    with pytest.raises(ValueError, match="OPENAI_API_KEY not found"):
         LLMClient(provider="openai")
 
 

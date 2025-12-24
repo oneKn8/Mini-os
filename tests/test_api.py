@@ -2,6 +2,8 @@
 API integration tests
 """
 
+import os
+import pytest
 from fastapi.testclient import TestClient
 
 from backend.api.server import app
@@ -23,6 +25,7 @@ def test_root_endpoint():
     assert "service" in response.json()
 
 
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="Database not configured")
 def test_inbox_endpoint():
     """Test inbox endpoint (may be empty)."""
     response = client.get("/api/inbox")
@@ -30,6 +33,7 @@ def test_inbox_endpoint():
     assert isinstance(response.json(), list)
 
 
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 def test_planner_endpoint():
     """Test planner endpoint."""
     response = client.get("/api/planner/today")
@@ -38,6 +42,7 @@ def test_planner_endpoint():
     assert "must_do_today" in data or data == {}
 
 
+@pytest.mark.skipif(not os.getenv("DATABASE_URL"), reason="Database not configured")
 def test_pending_actions():
     """Test pending actions endpoint."""
     response = client.get("/api/actions/pending")
