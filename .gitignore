@@ -136,8 +136,17 @@ buildplan.md
 *_SUMMARY.md
 *_PLAN.md
 *_VERIFICATION.md
+*_ANALYSIS.md
+*_CLIENT_TYPES.md
 PROGRESS.md
 WHATS_NEXT.md
 *_NEXT_STEPS.md
 *_CHECKLIST.txt
+*_OAUTH_ACCESS.md
+
+# Logs and temp files
+*.log
+log*.txt
+.ops.pid
+=*
 

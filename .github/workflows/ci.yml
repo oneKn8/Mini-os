@@ -122,7 +122,7 @@ jobs:
     - name: Build Docker images
       run: |
         if [ -f docker-compose.yaml ] || [ -f docker-compose.yml ]; then
-          docker-compose build --no-cache
+          docker compose build --no-cache
         elif [ -f Dockerfile ]; then
           docker build -t multiagents:test .
         else
@@ -132,10 +132,10 @@ jobs:
     - name: Run Docker Compose health checks
       if: hashFiles('docker-compose.yaml') != '' || hashFiles('docker-compose.yml') != ''
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30
-        docker-compose ps
-        docker-compose down
+        docker compose ps
+        docker compose down
 
   security-scan:
     runs-on: ubuntu-latest
