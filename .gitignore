@@ -130,3 +130,14 @@ docker-compose.override.yml
 # We keep it locally but don't track changes
 GenerativeAIExamples/
 
+# Internal planning/status docs (keep locally)
+buildplan.md
+*_COMPLETE.md
+*_SUMMARY.md
+*_PLAN.md
+*_VERIFICATION.md
+PROGRESS.md
+WHATS_NEXT.md
+*_NEXT_STEPS.md
+*_CHECKLIST.txt
+
