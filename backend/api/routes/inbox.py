@@ -99,11 +99,7 @@ async def get_inbox_items(
         except Exception:
             raise HTTPException(status_code=400, detail="Invalid cursor format; must be ISO datetime")
 
-    items: List[Item] = (
-        query.order_by(Item.received_datetime.desc())
-        .limit(page_size)
-        .all()
-    )
+    items: List[Item] = query.order_by(Item.received_datetime.desc()).limit(page_size).all()
 
     gmail_category_filters = {"primary", "promotions", "social", "updates", "forums"}
     folder_filters = {"sent", "spam", "trash", "drafts", "inbox"}
@@ -134,7 +130,12 @@ async def get_inbox_items(
     # If no Gmail-style filter was applied, keep all items but still annotate
     if filter not in gmail_category_filters and filter not in folder_filters:
         filtered = [
-            (item, classify_gmail_category(get_gmail_labels(item)), classify_folder(item, get_gmail_labels(item)), get_gmail_labels(item))
+            (
+                item,
+                classify_gmail_category(get_gmail_labels(item)),
+                classify_folder(item, get_gmail_labels(item)),
+                get_gmail_labels(item),
+            )
             for item in items
         ]
 
@@ -156,9 +157,11 @@ async def get_inbox_items(
                 # Agent-assigned importance/category
                 "importance": item.agent_metadata.importance if item.agent_metadata else "medium",
                 "category": item.agent_metadata.category if item.agent_metadata else None,
-                "due_datetime": item.agent_metadata.due_datetime.isoformat()
-                if item.agent_metadata and item.agent_metadata.due_datetime
-                else None,
+                "due_datetime": (
+                    item.agent_metadata.due_datetime.isoformat()
+                    if item.agent_metadata and item.agent_metadata.due_datetime
+                    else None
+                ),
                 "suggested_action": item.agent_metadata.action_type if item.agent_metadata else None,
                 "read": item.is_read,
                 # Gmail-derived annotations
@@ -209,9 +212,11 @@ async def get_inbox_item(item_id: str, db: Session = Depends(get_db)):
         "received_at": item.received_datetime.isoformat() if item.received_datetime else None,
         "importance": item.agent_metadata.importance if item.agent_metadata else "medium",
         "category": item.agent_metadata.category if item.agent_metadata else None,
-        "due_datetime": item.agent_metadata.due_datetime.isoformat()
-        if item.agent_metadata and item.agent_metadata.due_datetime
-        else None,
+        "due_datetime": (
+            item.agent_metadata.due_datetime.isoformat()
+            if item.agent_metadata and item.agent_metadata.due_datetime
+            else None
+        ),
         "suggested_action": item.agent_metadata.action_type if item.agent_metadata else None,
         "labels": item.agent_metadata.labels if item.agent_metadata else [],
         "gmail": gmail_meta,

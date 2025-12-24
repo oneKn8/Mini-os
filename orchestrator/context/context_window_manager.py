@@ -13,10 +13,10 @@ Strategy:
 
 Example:
     User has 50-message conversation (110K tokens)
-    → Auto-compact triggered
-    → Keep: Last 10 messages verbatim (5K tokens)
-    → Compress: Messages 1-40 into summary (2K tokens)
-    → Result: 95K → 7K tokens, ready for next 119K
+    -> Auto-compact triggered
+    -> Keep: Last 10 messages verbatim (5K tokens)
+    -> Compress: Messages 1-40 into summary (2K tokens)
+    -> Result: 95K -> 7K tokens, ready for next 119K
 """
 
 import logging
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MessageEntry:
     """A single conversation message with metadata."""
+
     role: str  # "user" or "assistant"
     content: str
     timestamp: float = field(default_factory=time.time)
@@ -41,6 +42,7 @@ class MessageEntry:
 @dataclass
 class ConversationSession:
     """Tracks context for a single conversation session."""
+
     session_id: str
     messages: List[MessageEntry] = field(default_factory=list)
     total_tokens: int = 0
@@ -151,17 +153,11 @@ class ContextWindowManager:
         session.messages.append(message)
         session.total_tokens += tokens
 
-        logger.debug(
-            f"Added message: {tokens} tokens "
-            f"(total: {session.total_tokens}/{self.max_tokens})"
-        )
+        logger.debug(f"Added message: {tokens} tokens " f"(total: {session.total_tokens}/{self.max_tokens})")
 
         # Check if compaction needed
         if session.total_tokens >= self.compact_trigger:
-            logger.info(
-                f"Compaction triggered: {session.total_tokens} tokens "
-                f"(threshold: {self.compact_trigger})"
-            )
+            logger.info(f"Compaction triggered: {session.total_tokens} tokens " f"(threshold: {self.compact_trigger})")
             self._compact_session(session)
             return True
 
@@ -181,8 +177,8 @@ class ContextWindowManager:
             return
 
         # Split messages
-        messages_to_compress = session.messages[:-self.keep_recent_messages]
-        recent_messages = session.messages[-self.keep_recent_messages:]
+        messages_to_compress = session.messages[: -self.keep_recent_messages]
+        recent_messages = session.messages[-self.keep_recent_messages :]
 
         # Create summary of old messages
         summary_content = self._create_summary(messages_to_compress)
@@ -217,8 +213,8 @@ class ContextWindowManager:
 
         logger.info(
             f"Compacted session {session.session_id}: "
-            f"{old_tokens} → {summary_tokens} tokens "
-            f"(saved {tokens_saved}, {len(messages_to_compress)} → 1 message)"
+            f"{old_tokens} -> {summary_tokens} tokens "
+            f"(saved {tokens_saved}, {len(messages_to_compress)} -> 1 message)"
         )
 
     def _create_summary(self, messages: List[MessageEntry]) -> str:
@@ -249,7 +245,7 @@ class ContextWindowManager:
             summary_parts.append("Recent topics:")
             for i, msg in enumerate(sample, 1):
                 # Extract first sentence or 100 chars
-                preview = msg.split('.')[0][:100] if msg else ""
+                preview = msg.split(".")[0][:100] if msg else ""
                 summary_parts.append(f"  {i}. {preview}...")
 
         return "\n".join(summary_parts)
@@ -260,14 +256,29 @@ class ContextWindowManager:
         keywords = set()
 
         common_words = {
-            'what', 'how', 'when', 'where', 'who', 'can', 'could', 'would',
-            'the', 'is', 'are', 'my', 'me', 'you', 'your', 'this', 'that',
+            "what",
+            "how",
+            "when",
+            "where",
+            "who",
+            "can",
+            "could",
+            "would",
+            "the",
+            "is",
+            "are",
+            "my",
+            "me",
+            "you",
+            "your",
+            "this",
+            "that",
         }
 
         for msg in messages:
             words = msg.lower().split()
             for word in words:
-                word = word.strip('.,!?')
+                word = word.strip(".,!?")
                 if len(word) > 3 and word not in common_words:
                     keywords.add(word)
 
@@ -295,10 +306,12 @@ class ContextWindowManager:
             if not include_system and msg.role == "system":
                 continue
 
-            messages.append({
-                "role": msg.role,
-                "content": msg.content,
-            })
+            messages.append(
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                }
+            )
 
         return messages
 

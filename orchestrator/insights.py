@@ -322,7 +322,7 @@ class WeatherInsightGenerator:
                         category=InsightCategory.WEATHER,
                         priority=InsightPriority.HIGH,
                         title="Extreme Heat Warning",
-                        message=f"It's {temp}°C outside. Stay hydrated and avoid prolonged sun exposure.",
+                        message=f"It's {temp}C outside. Stay hydrated and avoid prolonged sun exposure.",
                         icon="hot",
                         source="weather",
                         data={"temperature": temp},
@@ -336,7 +336,7 @@ class WeatherInsightGenerator:
                         category=InsightCategory.WEATHER,
                         priority=InsightPriority.MEDIUM,
                         title="Cold Weather Alert",
-                        message=f"It's {temp}°C outside. Bundle up if going out!",
+                        message=f"It's {temp}C outside. Bundle up if going out!",
                         icon="cold",
                         source="weather",
                         data={"temperature": temp},
@@ -666,7 +666,7 @@ class InsightEngine:
             temp = current_weather.get("temperature", "")
             desc = current_weather.get("description", "")
             if temp and desc:
-                weather_summary = f"It's {temp}°C and {desc.lower()} outside"
+                weather_summary = f"It's {temp}C and {desc.lower()} outside"
 
         # Calendar summary
         if calendar_events:

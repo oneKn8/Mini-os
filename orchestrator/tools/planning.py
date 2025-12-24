@@ -74,9 +74,9 @@ def _get_items_from_db(limit: int = 50) -> List[Dict[str, Any]]:
                         "sender": item.sender or "",
                         "importance": getattr(metadata, "importance", "medium") if metadata else "medium",
                         "category": getattr(metadata, "category", "other") if metadata else "other",
-                        "due_datetime": metadata.due_datetime.isoformat()
-                        if (metadata and metadata.due_datetime)
-                        else None,
+                        "due_datetime": (
+                            metadata.due_datetime.isoformat() if (metadata and metadata.due_datetime) else None
+                        ),
                     }
                 )
             return result

@@ -11,7 +11,7 @@ This is primarily for L3 (LLM-generated) plans that are expensive to create.
 L1 (pattern) and L2 (semantic) caches are in-memory and don't need Redis.
 
 Expected Impact:
-- Repeated novel queries: 4s → 0.1s (40x faster)
+- Repeated novel queries: 4s -> 0.1s (40x faster)
 """
 
 import logging

@@ -7,14 +7,14 @@ L2: Semantic cache (0.1s) - Embedding similarity for variations
 L3: LLM planning (2-4s) - Full planning for novel queries
 
 Expected speedup:
-- Repeated queries: 15s → 0.05s (300x faster)
-- Similar queries: 15s → 0.1s (150x faster)
-- Novel queries: 15s → 3s (5x faster with optimized prompts)
+- Repeated queries: 15s -> 0.05s (300x faster)
+- Similar queries: 15s -> 0.1s (150x faster)
+- Novel queries: 15s -> 3s (5x faster with optimized prompts)
 
 Example:
-    Query 1: "What's my day like?" → LLM planning (3s)
-    Query 2: "What's my day like?" → Pattern match (0.05s)
-    Query 3: "How's my day looking?" → Semantic cache (0.1s)
+    Query 1: "What's my day like?" -> LLM planning (3s)
+    Query 2: "What's my day like?" -> Pattern match (0.05s)
+    Query 3: "How's my day looking?" -> Semantic cache (0.1s)
 """
 
 import hashlib
@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # Pattern Definitions
 # ============================================================================
 
+
 @dataclass
 class QueryPattern:
     """
@@ -50,6 +51,7 @@ class QueryPattern:
         reasoning: Why this plan was chosen
         priority: Higher priority patterns are checked first
     """
+
     name: str
     patterns: List[str]
     tools: List[str]
@@ -88,7 +90,6 @@ class PatternMatcher:
                 reasoning="Checking your calendar, priorities, and weather to give you a complete day overview",
                 priority=10,
             ),
-
             # Free time check
             QueryPattern(
                 name="free_time",
@@ -103,7 +104,6 @@ class PatternMatcher:
                 reasoning="Checking your calendar for availability",
                 priority=9,
             ),
-
             # Meeting prep
             QueryPattern(
                 name="meeting_prep",
@@ -118,7 +118,6 @@ class PatternMatcher:
                 reasoning="Searching for relevant emails and checking your calendar",
                 priority=8,
             ),
-
             # Email search
             QueryPattern(
                 name="email_search",
@@ -132,7 +131,6 @@ class PatternMatcher:
                 reasoning="Searching your emails",
                 priority=7,
             ),
-
             # Priority check
             QueryPattern(
                 name="priorities",
@@ -147,7 +145,6 @@ class PatternMatcher:
                 reasoning="Checking your priorities and calendar",
                 priority=8,
             ),
-
             # Weather
             QueryPattern(
                 name="weather",
@@ -161,7 +158,6 @@ class PatternMatcher:
                 reasoning="Checking the weather",
                 priority=6,
             ),
-
             # Email composition
             QueryPattern(
                 name="email_compose",
@@ -174,7 +170,6 @@ class PatternMatcher:
                 reasoning="Drafting an email for you",
                 priority=9,
             ),
-
             # Calendar event
             QueryPattern(
                 name="calendar_create",
@@ -219,9 +214,11 @@ class PatternMatcher:
 # Semantic Cache
 # ============================================================================
 
+
 @dataclass
 class CachedPlan:
     """Cached plan with metadata."""
+
     query: str
     query_embedding: List[float]
     plan: ToolPlan
@@ -255,14 +252,17 @@ class SemanticCache:
         if self._embedding_model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                self._embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+                self._embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
                 logger.info("Loaded all-MiniLM-L6-v2 for semantic caching")
             except ImportError:
                 logger.warning("sentence-transformers not installed, semantic cache disabled")
+
                 # Return a dummy that always returns None
                 class DummyModel:
                     def encode(self, text):
                         return None
+
                 self._embedding_model = DummyModel()
         return self._embedding_model
 
@@ -273,7 +273,7 @@ class SemanticCache:
             embedding = model.encode(text, convert_to_tensor=False)
             if embedding is None:
                 return None
-            return embedding.tolist() if hasattr(embedding, 'tolist') else list(embedding)
+            return embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
         except Exception as e:
             logger.error(f"Failed to compute embedding: {e}")
             return None
@@ -281,6 +281,7 @@ class SemanticCache:
     def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
         """Compute cosine similarity between two vectors."""
         import math
+
         dot_product = sum(x * y for x, y in zip(a, b))
         magnitude_a = math.sqrt(sum(x * x for x in a))
         magnitude_b = math.sqrt(sum(x * x for x in b))
@@ -375,6 +376,7 @@ class SemanticCache:
 # Smart Planner
 # ============================================================================
 
+
 class SmartPlanner:
     """
     Multi-layer intelligent query planner.
@@ -451,7 +453,7 @@ class SmartPlanner:
         Adapt a cached plan to the current context.
 
         For now, this is a no-op, but could be enhanced to:
-        - Adjust time parameters (today → specific date)
+        - Adjust time parameters (today -> specific date)
         - Extract different entity names
         - Modify based on context changes
         """

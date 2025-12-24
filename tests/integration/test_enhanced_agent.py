@@ -35,7 +35,7 @@ async def test_enhanced_agent_basic_query():
     assert "content" in response_event
     assert len(response_event["content"]) > 0
 
-    print(f"✓ Basic query: {len(events)} events, response length {len(response_event['content'])}")
+    print(f"* Basic query: {len(events)} events, response length {len(response_event['content'])}")
 
 
 @pytest.mark.asyncio
@@ -60,7 +60,7 @@ async def test_enhanced_agent_multi_tool_query():
 
     timing = response_event.get("timing", {})
     print(
-        f"✓ Multi-tool query: {len(tools_used)} tools in {duration:.2f}s "
+        f"* Multi-tool query: {len(tools_used)} tools in {duration:.2f}s "
         f"(plan={timing.get('plan_ms', 0)}ms, exec={timing.get('execution_ms', 0)}ms)"
     )
 
@@ -88,8 +88,7 @@ async def test_enhanced_agent_caching():
 
     # Second query should be faster (though both may be fast due to pattern matching)
     print(
-        f"✓ Caching: 1st query {duration1:.3f}s, 2nd query {duration2:.3f}s "
-        f"(speedup: {duration1/duration2:.1f}x)"
+        f"* Caching: 1st query {duration1:.3f}s, 2nd query {duration2:.3f}s " f"(speedup: {duration1/duration2:.1f}x)"
     )
 
     # Check cache stats
@@ -115,7 +114,7 @@ async def test_enhanced_agent_stats():
     assert "planner" in stats
     assert "decision_memory" in stats
 
-    print(f"✓ Stats: {stats['queries_handled']} queries handled")
+    print(f"* Stats: {stats['queries_handled']} queries handled")
     print(f"  Planner: {stats['planner']}")
     print(f"  Memory: {stats['decision_memory']}")
 
@@ -155,7 +154,7 @@ async def test_enhanced_agent_parallel_speedup():
     speedup = sequential_duration / parallel_duration if parallel_duration > 0 else 1.0
 
     print(
-        f"✓ Parallel vs Sequential: "
+        f"* Parallel vs Sequential: "
         f"parallel={parallel_duration:.2f}s, sequential={sequential_duration:.2f}s, "
         f"speedup={speedup:.1f}x"
     )
@@ -189,8 +188,9 @@ if __name__ == "__main__":
                 await test_func()
                 passed += 1
             except Exception as e:
-                print(f"✗ {name}: {e}")
+                print(f"x {name}: {e}")
                 import traceback
+
                 traceback.print_exc()
                 failed += 1
 

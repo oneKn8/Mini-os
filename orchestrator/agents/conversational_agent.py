@@ -950,7 +950,7 @@ class ConversationalAgent(BaseAgent):
                 temp = result.get("temperature", "")
                 desc = result.get("description", "")
                 if temp and desc:
-                    return f"Currently {temp}°C and {desc.lower()}"
+                    return f"Currently {temp}C and {desc.lower()}"
 
             elif tool_name == "get_weather_forecast":
                 summary = result.get("summary", "")

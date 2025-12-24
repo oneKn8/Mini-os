@@ -24,7 +24,7 @@ def test_exact_question_match():
     # Second time should be blocked
     assert memory.has_asked("What's my schedule?") is True
 
-    print("✓ Exact question match: prevented duplicate")
+    print("* Exact question match: prevented duplicate")
 
 
 def test_case_insensitive_question():
@@ -35,7 +35,7 @@ def test_case_insensitive_question():
 
     assert memory.has_asked("what's my schedule?") is True
 
-    print("✓ Case insensitive: 'What's MY Schedule?' == 'what's my schedule?'")
+    print("* Case insensitive: 'What's MY Schedule?' == 'what's my schedule?'")
 
 
 def test_semantic_question_similarity():
@@ -57,11 +57,11 @@ def test_semantic_question_similarity():
 
     for q in similar_questions:
         if memory.has_asked(q):
-            print(f"  ✓ Semantic match: '{q}' similar to 'What's my day like?'")
+            print(f"  * Semantic match: '{q}' similar to 'What's my day like?'")
 
     # Ensure at least semantic checking is working (if embeddings available)
     # If not available, test will just pass
-    print("✓ Semantic similarity check completed")
+    print("* Semantic similarity check completed")
 
 
 def test_tool_execution_tracking():
@@ -78,7 +78,7 @@ def test_tool_execution_tracking():
     # Third time should be blocked
     assert memory.has_executed_tool("search_emails", {"from": "john"}) is True
 
-    print("✓ Tool execution: blocked after 2 executions")
+    print("* Tool execution: blocked after 2 executions")
 
 
 def test_different_tool_args():
@@ -90,7 +90,7 @@ def test_different_tool_args():
     # Different args should be allowed
     assert memory.has_executed_tool("search_emails", {"from": "jane"}) is False
 
-    print("✓ Tool args: different args treated as different executions")
+    print("* Tool args: different args treated as different executions")
 
 
 def test_loop_detection_repeating():
@@ -105,14 +105,14 @@ def test_loop_detection_repeating():
 
     assert memory.is_looping(window_size=5) is True
 
-    print("✓ Loop detection: caught repeating pattern")
+    print("* Loop detection: caught repeating pattern")
 
 
 def test_loop_detection_alternating():
     """Test loop detection for alternating patterns."""
     memory = DecisionMemory()
 
-    # Create alternating pattern A→B→A→B
+    # Create alternating pattern A->B->A->B
     memory.record_question("Check calendar?")
     memory.record_question("Check email?")
     memory.record_question("Check calendar?")
@@ -120,7 +120,7 @@ def test_loop_detection_alternating():
 
     assert memory.is_looping(window_size=5) is True
 
-    print("✓ Loop detection: caught alternating pattern")
+    print("* Loop detection: caught alternating pattern")
 
 
 def test_circuit_breaker():
@@ -141,7 +141,7 @@ def test_circuit_breaker():
     assert memory.has_asked("New question?") is True
     assert memory.should_early_exit() is True
 
-    print("✓ Circuit breaker: opened after 3 failures")
+    print("* Circuit breaker: opened after 3 failures")
 
 
 def test_circuit_breaker_reset_on_success():
@@ -160,7 +160,7 @@ def test_circuit_breaker_reset_on_success():
     assert memory.failed_attempts == 1
     assert memory.circuit_open is False
 
-    print("✓ Circuit breaker: reset on success")
+    print("* Circuit breaker: reset on success")
 
 
 def test_manual_circuit_reset():
@@ -179,7 +179,7 @@ def test_manual_circuit_reset():
     assert memory.circuit_open is False
     assert memory.failed_attempts == 0
 
-    print("✓ Circuit breaker: manual reset works")
+    print("* Circuit breaker: manual reset works")
 
 
 def test_get_stats():
@@ -197,7 +197,7 @@ def test_get_stats():
     assert stats["actions_taken"] == 0
     assert stats["loops_prevented"] >= 0
 
-    print(f"✓ Stats: {stats}")
+    print(f"* Stats: {stats}")
 
 
 def test_clear():
@@ -215,7 +215,7 @@ def test_clear():
     assert stats["tools_executed"] == 0
     assert stats["loops_prevented"] == 0
 
-    print("✓ Clear: all history cleared")
+    print("* Clear: all history cleared")
 
 
 def test_recent_decisions():
@@ -233,7 +233,7 @@ def test_recent_decisions():
     assert recent[0].content == "Q2"
     assert recent[1].content == "tool1"
 
-    print("✓ Recent decisions: retrieved in correct order")
+    print("* Recent decisions: retrieved in correct order")
 
 
 if __name__ == "__main__":
@@ -267,8 +267,9 @@ if __name__ == "__main__":
                 test_func()
                 passed += 1
             except Exception as e:
-                print(f"✗ {name}: {e}")
+                print(f"x {name}: {e}")
                 import traceback
+
                 traceback.print_exc()
                 failed += 1
 

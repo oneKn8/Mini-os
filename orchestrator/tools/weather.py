@@ -209,7 +209,7 @@ def get_weather_forecast(city: Optional[str] = None, country: Optional[str] = No
         if forecast_days:
             temps = [d.temp_high for d in forecast_days]
             avg_temp = sum(temps) / len(temps)
-            summary = f"Expect temperatures around {avg_temp:.0f}°C over the next {len(forecast_days)} days."
+            summary = f"Expect temperatures around {avg_temp:.0f}C over the next {len(forecast_days)} days."
 
             # Check for rain
             rainy_days = [d for d in forecast_days if d.precipitation_chance > 50]

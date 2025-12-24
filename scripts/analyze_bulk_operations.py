@@ -2,16 +2,17 @@
 Analyze token usage for bulk/repetitive operations.
 """
 
+
 def count_tokens_estimate(text: str) -> int:
-    """Rough estimate: 1 token ≈ 4 chars."""
+    """Rough estimate: 1 token ~ 4 chars."""
     return len(text) // 4
 
 
 def analyze_bulk_email_scenario():
     """Analyze bulk email sending scenario."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("BULK EMAIL SCENARIO: Send 50 personalized emails")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Components
     system_prompt = 721
@@ -82,9 +83,9 @@ def analyze_bulk_email_scenario():
     print()
 
     # Context window limits
-    print("="*60)
+    print("=" * 60)
     print("CONTEXT WINDOW LIMITS")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     models = {
         "GPT-4": 8192,
@@ -94,24 +95,24 @@ def analyze_bulk_email_scenario():
     }
 
     for model, limit in models.items():
-        fits = "✓" if total <= limit else "✗"
+        fits = "[PASS]" if total <= limit else "[FAIL]"
         utilization = (total / limit) * 100
         print(f"{model:20} {limit:>7} tokens  {fits}  ({utilization:>5.1f}% used)")
 
     print()
 
     # Recommendations
-    print("="*60)
+    print("=" * 60)
     print("PROBLEM & SOLUTION")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
-    print(f"❌ NAIVE APPROACH: {total:,} tokens")
-    print("   → Exceeds GPT-4 base limit (8K)")
-    print("   → Single LLM call with all data")
-    print("   → Waits for all 50 operations to finish")
+    print(f"[X] NAIVE APPROACH: {total:,} tokens")
+    print("   -> Exceeds GPT-4 base limit (8K)")
+    print("   -> Single LLM call with all data")
+    print("   -> Waits for all 50 operations to finish")
     print()
 
-    print("✅ SMART APPROACH: Streaming + Batching")
+    print("[OK] SMART APPROACH: Streaming + Batching")
     print()
 
     # Smart approach calculation
@@ -119,10 +120,10 @@ def analyze_bulk_email_scenario():
     num_batches = num_recipients // batch_size
 
     tokens_per_batch = (
-        baseline +
-        (tokens_per_recipient * batch_size) +  # 10 recipients
-        template_tokens +
-        (tokens_per_result * batch_size)  # 10 results
+        baseline
+        + (tokens_per_recipient * batch_size)  # 10 recipients
+        + template_tokens
+        + (tokens_per_result * batch_size)  # 10 results
     )
 
     print(f"1. Split into {num_batches} batches of {batch_size} emails")
@@ -131,21 +132,21 @@ def analyze_bulk_email_scenario():
     print()
 
     print("2. Stream results progressively:")
-    print("   → Batch 1: Draft 10 emails (emit progress)")
-    print("   → Batch 2: Draft 10 emails (emit progress)")
-    print("   → ... continue ...")
-    print("   → Don't hold all results in context")
+    print("   -> Batch 1: Draft 10 emails (emit progress)")
+    print("   -> Batch 2: Draft 10 emails (emit progress)")
+    print("   -> ... continue ...")
+    print("   -> Don't hold all results in context")
     print()
 
     print("3. Summarize instead of full details:")
     print("   Before: 50 full email drafts in context")
-    print("   After: Summary (\"50 emails drafted successfully\")")
-    print(f"   Savings: {total_results_tokens:,} → 50 tokens ({total_results_tokens/50:.0f}x reduction)")
+    print('   After: Summary ("50 emails drafted successfully")')
+    print(f"   Savings: {total_results_tokens:,} -> 50 tokens ({total_results_tokens/50:.0f}x reduction)")
     print()
 
     optimized_total = baseline + recipient_list_tokens + template_tokens + 50
-    print(f"✅ OPTIMIZED TOTAL: {optimized_total:,} tokens")
-    print(f"   Reduction: {total:,} → {optimized_total:,} ({total/optimized_total:.1f}x)")
+    print(f"[OK] OPTIMIZED TOTAL: {optimized_total:,} tokens")
+    print(f"   Reduction: {total:,} -> {optimized_total:,} ({total/optimized_total:.1f}x)")
     print()
 
     return {
@@ -158,9 +159,9 @@ def analyze_bulk_email_scenario():
 
 def analyze_other_bulk_scenarios():
     """Analyze other repetitive scenarios."""
-    print("="*60)
+    print("=" * 60)
     print("OTHER BULK SCENARIOS")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     scenarios = {
         "Bulk calendar events (20 meetings)": {
@@ -208,29 +209,29 @@ if __name__ == "__main__":
     results = analyze_bulk_email_scenario()
     analyze_other_bulk_scenarios()
 
-    print("="*60)
+    print("=" * 60)
     print("KEY TAKEAWAYS")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     print("1. BULK OPERATIONS NEED DIFFERENT STRATEGY")
-    print("   → Can't fit all data + results in context")
-    print("   → Must use streaming/batching")
+    print("   -> Can't fit all data + results in context")
+    print("   -> Must use streaming/batching")
     print()
 
     print("2. TOKEN BUDGET BY OPERATION TYPE:")
-    print("   • Simple query:        1,500-2,000 tokens")
-    print("   • Multi-tool query:    3,000-4,500 tokens")
-    print("   • Bulk operation:     10,000-50,000+ tokens (batched)")
+    print("   - Simple query:        1,500-2,000 tokens")
+    print("   - Multi-tool query:    3,000-4,500 tokens")
+    print("   - Bulk operation:     10,000-50,000+ tokens (batched)")
     print()
 
     print("3. OPTIMIZATION TECHNIQUES:")
-    print("   ✓ Batch processing (10-50 items per batch)")
-    print("   ✓ Result streaming (don't accumulate all)")
-    print("   ✓ Result summarization (stats, not details)")
-    print("   ✓ Progress events (show what's happening)")
+    print("   * Batch processing (10-50 items per batch)")
+    print("   * Result streaming (don't accumulate all)")
+    print("   * Result summarization (stats, not details)")
+    print("   * Progress events (show what's happening)")
     print()
 
     print("4. WHEN TO USE EACH:")
-    print("   • Standard queries: Full context (3-4K tokens)")
-    print("   • Bulk operations: Batched + streamed (unlimited)")
+    print("   - Standard queries: Full context (3-4K tokens)")
+    print("   - Bulk operations: Batched + streamed (unlimited)")
     print()

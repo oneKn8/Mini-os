@@ -10,7 +10,7 @@ Configuration per tool type:
 - Search: 1 hour (3600s)
 
 Expected Impact:
-- Repeated tool calls: 5s → 0.1s (50x faster)
+- Repeated tool calls: 5s -> 0.1s (50x faster)
 - Reduced API calls to external services
 """
 
@@ -28,20 +28,16 @@ TOOL_TTL_CONFIG = {
     "search_emails": 7200,  # 2 hours
     "get_email": 7200,
     "get_inbox_items": 7200,
-
     # Calendar tools
     "get_todays_events": 14400,  # 4 hours
     "get_upcoming_events": 14400,
     "get_event": 14400,
-
     # Weather tools
     "get_current_weather": 1800,  # 30 minutes
     "get_weather_forecast": 3600,  # 1 hour
-
     # Priority/planning tools
     "get_priority_items": 7200,  # 2 hours
     "plan_day": 14400,  # 4 hours
-
     # Default for unknown tools
     "default": 3600,  # 1 hour
 }

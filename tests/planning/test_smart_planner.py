@@ -43,7 +43,7 @@ async def test_pattern_matching_day_overview():
         assert len(plan.parallel_groups) == 1
         assert len(plan.parallel_groups[0]) == 3
 
-    print(f"✓ Pattern matching: {len(test_queries)} day overview variations")
+    print(f"* Pattern matching: {len(test_queries)} day overview variations")
 
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_pattern_matching_email():
         assert plan is not None, f"Failed to match: {query}"
         assert plan.tools == ["search_emails"]
 
-    print(f"✓ Pattern matching: {len(test_queries)} email variations")
+    print(f"* Pattern matching: {len(test_queries)} email variations")
 
 
 @pytest.mark.asyncio
@@ -85,7 +85,7 @@ async def test_pattern_matching_speed():
     avg_ms = (duration / len(queries)) * 1000
 
     assert avg_ms < 1.0, f"Pattern matching too slow: {avg_ms:.3f}ms avg"
-    print(f"✓ Pattern matching speed: {avg_ms:.3f}ms avg ({len(queries)} queries)")
+    print(f"* Pattern matching speed: {avg_ms:.3f}ms avg ({len(queries)} queries)")
 
 
 @pytest.mark.asyncio
@@ -115,7 +115,7 @@ async def test_semantic_cache_similarity():
             assert plan is not None, f"Should match similar query: {query}"
             assert plan.tools == original_plan.tools
 
-    print(f"✓ Semantic cache: matched {len(similar_queries)} similar queries")
+    print(f"* Semantic cache: matched {len(similar_queries)} similar queries")
 
 
 @pytest.mark.asyncio
@@ -145,7 +145,7 @@ async def test_semantic_cache_miss():
         if plan and plan.tools == calendar_plan.tools:
             pytest.fail(f"Should NOT match different query: {query}")
 
-    print(f"✓ Semantic cache: correctly missed {len(different_queries)} different queries")
+    print(f"* Semantic cache: correctly missed {len(different_queries)} different queries")
 
 
 @pytest.mark.asyncio
@@ -166,7 +166,7 @@ async def test_semantic_cache_eviction():
 
     assert len(cache.cache) == 3, "Cache should be limited to max_cache_size"
 
-    print("✓ Semantic cache: eviction works correctly")
+    print("* Semantic cache: eviction works correctly")
 
 
 @pytest.mark.asyncio
@@ -182,7 +182,7 @@ async def test_smart_planner_l1_fast_path():
     assert "get_todays_events" in plan.tools
     assert duration_ms < 5, f"L1 should be very fast, got {duration_ms:.1f}ms"
 
-    print(f"✓ SmartPlanner L1: {duration_ms:.2f}ms")
+    print(f"* SmartPlanner L1: {duration_ms:.2f}ms")
 
 
 @pytest.mark.asyncio
@@ -202,7 +202,7 @@ async def test_smart_planner_l2_semantic():
                 parallel_groups=[["get_todays_events"]],
                 reasoning="Check schedule",
                 expected_synthesis="Show schedule",
-            )
+            ),
         )
 
         # Similar query should hit L2
@@ -213,14 +213,14 @@ async def test_smart_planner_l2_semantic():
         # L2 should be fast (but slower than L1)
         assert duration_ms < 200, f"L2 should be fast, got {duration_ms:.1f}ms"
 
-        print(f"✓ SmartPlanner L2: {duration_ms:.2f}ms")
+        print(f"* SmartPlanner L2: {duration_ms:.2f}ms")
     else:
-        print("⊘ SmartPlanner L2: skipped (sentence-transformers not available)")
+        print("[SKIP] SmartPlanner L2: skipped (sentence-transformers not available)")
 
 
 @pytest.mark.asyncio
 async def test_smart_planner_cache_hierarchy():
-    """Test that SmartPlanner checks L1 → L2 → L3 in order."""
+    """Test that SmartPlanner checks L1 -> L2 -> L3 in order."""
     planner = SmartPlanner(enable_semantic_cache=True)
 
     # Query that matches L1 pattern
@@ -239,7 +239,7 @@ async def test_smart_planner_cache_hierarchy():
                 parallel_groups=[["get_todays_events"]],
                 reasoning="Check schedule",
                 expected_synthesis="Show schedule",
-            )
+            ),
         )
 
         start = time.time()
@@ -249,9 +249,9 @@ async def test_smart_planner_cache_hierarchy():
         # L1 should be faster than L2
         assert l1_time < l2_time, f"L1 ({l1_time:.1f}ms) should be faster than L2 ({l2_time:.1f}ms)"
 
-        print(f"✓ Cache hierarchy: L1={l1_time:.1f}ms < L2={l2_time:.1f}ms")
+        print(f"* Cache hierarchy: L1={l1_time:.1f}ms < L2={l2_time:.1f}ms")
     else:
-        print("⊘ Cache hierarchy: skipped (sentence-transformers not available)")
+        print("[SKIP] Cache hierarchy: skipped (sentence-transformers not available)")
 
 
 @pytest.mark.asyncio
@@ -268,7 +268,7 @@ async def test_smart_planner_stats():
         assert "semantic_cache" in stats
         assert "size" in stats["semantic_cache"]
 
-    print(f"✓ SmartPlanner stats: {stats['pattern_count']} patterns")
+    print(f"* SmartPlanner stats: {stats['pattern_count']} patterns")
 
 
 if __name__ == "__main__":
@@ -299,8 +299,9 @@ if __name__ == "__main__":
                 await test_func()
                 passed += 1
             except Exception as e:
-                print(f"✗ {name}: {e}")
+                print(f"x {name}: {e}")
                 import traceback
+
                 traceback.print_exc()
                 failed += 1
 

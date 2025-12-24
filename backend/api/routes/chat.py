@@ -37,6 +37,7 @@ USE_ENHANCED_AGENT = os.getenv("USE_ENHANCED_AGENT", "false").lower() == "true"
 if USE_ENHANCED_AGENT:
     try:
         from orchestrator.enhanced_agent import EnhancedConversationalAgent
+
         logger.info("Enhanced agent enabled - using parallel execution and caching")
     except ImportError:
         logger.warning("Enhanced agent not available, falling back to standard agent")
@@ -253,9 +254,7 @@ class ChatService:
         self._agent: Optional[ConversationalAgent] = None
         self._agent_cache: Dict[str, ConversationalAgent] = {}  # type: ignore
 
-    def _get_agent(
-        self, model_provider: Optional[str] = None, model_name: Optional[str] = None
-    ):
+    def _get_agent(self, model_provider: Optional[str] = None, model_name: Optional[str] = None):
         """Get or create the conversational agent with optional model overrides."""
         # Create cache key from model settings
         cache_key = f"{model_provider or 'default'}:{model_name or 'default'}"
@@ -677,6 +676,7 @@ class ChatService:
                         event["auto_approved_count"] = auto_approved_count
 
                     import re
+
                     content = event.get("content", "")
                     # Strip any literal tool-call artifacts like <function=...>...</function>
                     content = re.sub(r"<function[^>]*>.*?</function>", "", content, flags=re.DOTALL).strip()

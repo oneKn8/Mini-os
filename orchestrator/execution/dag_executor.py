@@ -15,7 +15,7 @@ Example:
     Query: "What's my day like?"
     Plan: [get_calendar, get_emails, get_weather]
 
-    Traditional Sequential: 3 tools × 5s = 15s
+    Traditional Sequential: 3 tools x 5s = 15s
     DAG Parallel: max(5s, 5s, 5s) = 5s (3x faster)
 """
 
@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 class StepStatus(Enum):
     """Execution status for a step."""
+
     PENDING = "pending"
     READY = "ready"
     RUNNING = "running"
@@ -55,6 +56,7 @@ class ExecutionStep:
         retry_count: Number of retry attempts (default: 2)
         timeout_ms: Timeout in milliseconds (default: 30000)
     """
+
     tool_name: str
     tool: Any
     args: Dict[str, Any] = field(default_factory=dict)
@@ -95,6 +97,7 @@ class ExecutionResult:
         total_duration_ms: Total execution time
         step_details: Detailed info for each step
     """
+
     success: bool
     results: Dict[str, Any]
     errors: Dict[str, str]
@@ -181,7 +184,7 @@ class DAGExecutor:
                     break
 
             # Limit parallelism
-            ready_steps = ready_steps[:self.max_parallel]
+            ready_steps = ready_steps[: self.max_parallel]
 
             # Emit progress
             if emit_progress and self.streaming_session:
@@ -321,9 +324,7 @@ class DAGExecutor:
 
                 # Visual feedback: complete
                 if self.visual_feedback:
-                    await self.visual_feedback.complete_tool_execution(
-                        step.tool_name, result, success=True
-                    )
+                    await self.visual_feedback.complete_tool_execution(step.tool_name, result, success=True)
 
                 return result
 
@@ -337,7 +338,7 @@ class DAGExecutor:
 
             # Retry delay with exponential backoff
             if attempt < step.retry_count:
-                delay = (self.retry_delay_ms / 1000) * (2 ** attempt)
+                delay = (self.retry_delay_ms / 1000) * (2**attempt)
                 await asyncio.sleep(delay)
 
         # All retries exhausted
@@ -354,9 +355,7 @@ class DAGExecutor:
 
         # Visual feedback: error
         if self.visual_feedback:
-            await self.visual_feedback.complete_tool_execution(
-                step.tool_name, None, success=False
-            )
+            await self.visual_feedback.complete_tool_execution(step.tool_name, None, success=False)
 
         raise Exception(f"Tool {step.tool_name} failed after {step.retry_count + 1} attempts: {last_error}")
 

@@ -8,9 +8,9 @@ Integrates all Phase 1 performance improvements:
 4. DecisionMemory - Loop prevention
 
 Expected Performance:
-- Repeated queries: 15s → 0.1s (150x faster)
-- Novel 3-tool queries: 15s → 6s (2.5x faster)
-- Similar queries: 15s → 0.5s (30x faster)
+- Repeated queries: 15s -> 0.1s (150x faster)
+- Novel 3-tool queries: 15s -> 6s (2.5x faster)
+- Similar queries: 15s -> 0.5s (30x faster)
 """
 
 import asyncio
@@ -142,9 +142,7 @@ class EnhancedConversationalAgent:
 
         # Context management: add user message
         if self.context_manager:
-            compacted = self.context_manager.add_message(
-                session_id, "user", user_message
-            )
+            compacted = self.context_manager.add_message(session_id, "user", user_message)
             if compacted:
                 self.stats["context_compactions"] += 1
                 logger.info(f"Context auto-compacted for session {session_id}")
@@ -167,7 +165,7 @@ class EnhancedConversationalAgent:
                 }
                 return
 
-            # Phase 1: Planning (L1 → L2 → L3)
+            # Phase 1: Planning (L1 -> L2 -> L3)
             yield {"type": "reasoning", "content": "Analyzing your request..."}
 
             plan_start = time.time()
@@ -179,9 +177,7 @@ class EnhancedConversationalAgent:
             # If no tools needed, use base agent
             if not plan.tools:
                 yield {"type": "reasoning", "content": "Processing conversationally..."}
-                async for event in self.base_agent.stream(
-                    user_message, conversation_history, user_context
-                ):
+                async for event in self.base_agent.stream(user_message, conversation_history, user_context):
                     yield event
                 return
 
@@ -233,28 +229,21 @@ class EnhancedConversationalAgent:
                             await visual_feedback.start_tool_execution(tool_name, {})
 
                             tool = self.tool_map[tool_name]
-                            result = await self._execute_tool_with_cache(
-                                tool_name, tool, {}
-                            )
+                            result = await self._execute_tool_with_cache(tool_name, tool, {})
                             tool_results[tool_name] = result
 
                             # Visual feedback: complete
-                            await visual_feedback.complete_tool_execution(
-                                tool_name, result, success=True
-                            )
+                            await visual_feedback.complete_tool_execution(tool_name, result, success=True)
                         except Exception as e:
                             tool_errors[tool_name] = str(e)
 
                             # Visual feedback: error
-                            await visual_feedback.complete_tool_execution(
-                                tool_name, None, success=False
-                            )
+                            await visual_feedback.complete_tool_execution(tool_name, None, success=False)
 
                 exec_duration_ms = int((time.time() - exec_start) * 1000)
 
             logger.info(
-                f"Tools executed in {exec_duration_ms}ms: "
-                f"{len(tool_results)} succeeded, {len(tool_errors)} failed"
+                f"Tools executed in {exec_duration_ms}ms: " f"{len(tool_results)} succeeded, {len(tool_errors)} failed"
             )
 
             # Emit tool results
@@ -279,9 +268,7 @@ class EnhancedConversationalAgent:
 
             # Context management: add assistant response
             if self.context_manager:
-                self.context_manager.add_message(
-                    session_id, "assistant", response
-                )
+                self.context_manager.add_message(session_id, "assistant", response)
 
             # Emit final response
             total_duration_ms = int((time.time() - start_time) * 1000)
@@ -314,9 +301,7 @@ class EnhancedConversationalAgent:
                 "content": f"I encountered an error: {str(e)}",
             }
 
-    async def _wrap_steps_with_cache(
-        self, steps: List[ExecutionStep]
-    ) -> List[ExecutionStep]:
+    async def _wrap_steps_with_cache(self, steps: List[ExecutionStep]) -> List[ExecutionStep]:
         """Wrap execution steps with tool caching."""
         if not self.tool_cache:
             return steps
@@ -345,9 +330,7 @@ class EnhancedConversationalAgent:
 
         return cached_steps
 
-    async def _execute_tool_with_cache(
-        self, tool_name: str, tool: Any, args: Dict[str, Any]
-    ) -> Any:
+    async def _execute_tool_with_cache(self, tool_name: str, tool: Any, args: Dict[str, Any]) -> Any:
         """Execute tool with caching."""
         if not self.tool_cache:
             # No cache - execute directly
@@ -391,18 +374,13 @@ class EnhancedConversationalAgent:
     ) -> str:
         """Synthesize final response from tool results."""
         # Build synthesis prompt
-        prompt = self._build_synthesis_prompt(
-            user_message, plan, tool_results, conversation_history
-        )
+        prompt = self._build_synthesis_prompt(user_message, plan, tool_results, conversation_history)
 
         # Use LLM cache if available
         if self.llm_cache:
+
             async def generate():
-                return await self.llm_client.achat(
-                    message=prompt,
-                    use_history=False,
-                    temperature=0.7
-                )
+                return await self.llm_client.achat(message=prompt, use_history=False, temperature=0.7)
 
             response = await self.llm_cache.get_or_generate(
                 prompt=prompt,
@@ -411,11 +389,7 @@ class EnhancedConversationalAgent:
                 temperature=0.7,
             )
         else:
-            response = await self.llm_client.achat(
-                message=prompt,
-                use_history=False,
-                temperature=0.7
-            )
+            response = await self.llm_client.achat(message=prompt, use_history=False, temperature=0.7)
 
         return response
 

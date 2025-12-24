@@ -42,17 +42,17 @@ jobs:
     
     - name: Run Black formatter check
       run: |
-        black --check --line-length=119 . || exit 1
+        black --check --line-length=119 --extend-exclude="GenerativeAIExamples" . || exit 1
     
     - name: Run Flake8
       run: |
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --max-line-length=119 --extend-ignore=E203,W503 --statistics
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=GenerativeAIExamples
+        flake8 . --count --max-line-length=119 --extend-ignore=E203,W503 --statistics --exclude=GenerativeAIExamples
     
     - name: Run MyPy type checking
       continue-on-error: true
       run: |
-        mypy . --ignore-missing-imports || true
+        mypy . --ignore-missing-imports --exclude GenerativeAIExamples || true
     
     - name: Run tests with pytest
       run: |
@@ -122,7 +122,7 @@ jobs:
     
     - name: Build Docker images
       run: |
-        if [ -f docker-compose.yml ]; then
+        if [ -f docker-compose.yaml ] || [ -f docker-compose.yml ]; then
           docker-compose build --no-cache
         elif [ -f Dockerfile ]; then
           docker build -t multiagents:test .
@@ -131,7 +131,7 @@ jobs:
         fi
     
     - name: Run Docker Compose health checks
-      if: hashFiles('docker-compose.yml') != ''
+      if: hashFiles('docker-compose.yaml') != '' || hashFiles('docker-compose.yml') != ''
       run: |
         docker-compose up -d
         sleep 30

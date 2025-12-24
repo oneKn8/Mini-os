@@ -291,7 +291,9 @@ class SyncService:
 
         return synced
 
-    def resync_gmail_items(self, account: ConnectedAccount, limit: int = 100, newer_than_days: Optional[int] = 365) -> int:
+    def resync_gmail_items(
+        self, account: ConnectedAccount, limit: int = 100, newer_than_days: Optional[int] = 365
+    ) -> int:
         """
         Re-fetch and update existing Gmail items to backfill HTML bodies and metadata.
         """

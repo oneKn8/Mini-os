@@ -18,7 +18,7 @@ def test_new_session_fresh_context():
     assert usage["utilization"] == 0.0
     assert usage["messages"] == 0
 
-    print("✓ New session: 126K tokens available")
+    print("* New session: 126K tokens available")
 
 
 def test_add_messages_increments_tokens():
@@ -35,7 +35,7 @@ def test_add_messages_increments_tokens():
     assert usage["messages"] == 2
     assert usage["available"] < 126000
 
-    print(f"✓ Added 2 messages: {usage['total_tokens']} tokens used")
+    print(f"* Added 2 messages: {usage['total_tokens']} tokens used")
 
 
 def test_auto_compaction_triggers_at_threshold():
@@ -72,7 +72,7 @@ def test_auto_compaction_triggers_at_threshold():
     # Should have fewer messages (old ones compressed)
     assert usage["messages"] <= 5, f"Expected <=5 messages after compaction, got {usage['messages']}"
 
-    print(f"✓ Auto-compaction: {usage['total_tokens']} tokens, {usage['messages']} messages")
+    print(f"* Auto-compaction: {usage['total_tokens']} tokens, {usage['messages']} messages")
 
 
 def test_recent_messages_kept_verbatim():
@@ -108,7 +108,7 @@ def test_recent_messages_kept_verbatim():
     for content in recent_contents:
         assert content in context_text, f"Recent message should be kept verbatim"
 
-    print(f"✓ Recent messages preserved: {len(recent_contents)} messages intact")
+    print(f"* Recent messages preserved: {len(recent_contents)} messages intact")
 
 
 def test_reset_session_clears_context():
@@ -131,7 +131,7 @@ def test_reset_session_clears_context():
     assert usage_after["messages"] == 0
     assert usage_after["available"] == 126000
 
-    print("✓ Session reset: 126K tokens available again")
+    print("* Session reset: 126K tokens available again")
 
 
 def test_multiple_sessions_independent():
@@ -151,7 +151,7 @@ def test_multiple_sessions_independent():
     # Different token counts (session 2 has more text)
     assert usage_1["total_tokens"] < usage_2["total_tokens"]
 
-    print(f"✓ Independent sessions: session_1={usage_1['total_tokens']}, session_2={usage_2['total_tokens']}")
+    print(f"* Independent sessions: session_1={usage_1['total_tokens']}, session_2={usage_2['total_tokens']}")
 
 
 def test_compaction_stats_tracked():
@@ -177,7 +177,7 @@ def test_compaction_stats_tracked():
     assert usage["compactions"] > 0
     assert stats["tokens_saved"] > 0
 
-    print(f"✓ Compaction stats: {stats['total_compactions']} compactions, {stats['tokens_saved']} tokens saved")
+    print(f"* Compaction stats: {stats['total_compactions']} compactions, {stats['tokens_saved']} tokens saved")
 
 
 def test_get_context_for_llm_format():
@@ -185,7 +185,7 @@ def test_get_context_for_llm_format():
     manager = ContextWindowManager(max_tokens=126000)
 
     manager.add_message("session_1", "user", "What's the weather?")
-    manager.add_message("session_1", "assistant", "It's sunny and 72°F")
+    manager.add_message("session_1", "assistant", "It's sunny and 72F")
 
     context = manager.get_context_for_llm("session_1")
 
@@ -193,9 +193,9 @@ def test_get_context_for_llm_format():
     assert context[0]["role"] == "user"
     assert context[0]["content"] == "What's the weather?"
     assert context[1]["role"] == "assistant"
-    assert context[1]["content"] == "It's sunny and 72°F"
+    assert context[1]["content"] == "It's sunny and 72F"
 
-    print(f"✓ LLM context format: {len(context)} messages with role/content")
+    print(f"* LLM context format: {len(context)} messages with role/content")
 
 
 if __name__ == "__main__":
@@ -224,8 +224,9 @@ if __name__ == "__main__":
                 test_func()
                 passed += 1
             except Exception as e:
-                print(f"✗ {name}: {e}")
+                print(f"x {name}: {e}")
                 import traceback
+
                 traceback.print_exc()
                 failed += 1
 

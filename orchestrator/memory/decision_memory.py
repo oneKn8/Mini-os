@@ -10,9 +10,9 @@ Features:
 - Circuit breaker logic
 
 Example problematic loops this prevents:
-1. "Did I check calendar?" → checks → "Did I check calendar?" (loop)
-2. search_emails → no results → search_emails again (loop)
-3. Should I ask about X? → asks → Should I ask about X? (decision loop)
+1. "Did I check calendar?" -> checks -> "Did I check calendar?" (loop)
+2. search_emails -> no results -> search_emails again (loop)
+3. Should I ask about X? -> asks -> Should I ask about X? (decision loop)
 """
 
 import logging
@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Decision:
     """A decision made by the agent."""
+
     decision_type: str  # "question", "tool_execution", "action"
     content: str  # The question/tool/action
     context: str  # Context when decision was made
@@ -91,7 +92,8 @@ class DecisionMemory:
         if self._embedding_model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                self._embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+
+                self._embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
             except ImportError:
                 logger.warning("sentence-transformers not installed, using exact matching only")
                 self._embedding_model = None
@@ -110,6 +112,7 @@ class DecisionMemory:
             # Cosine similarity
             import numpy as np
             from numpy.linalg import norm
+
             cos_sim = np.dot(embeddings[0], embeddings[1]) / (norm(embeddings[0]) * norm(embeddings[1]))
             return float(cos_sim)
         except Exception as e:
@@ -131,10 +134,7 @@ class DecisionMemory:
             return True
 
         # Check exact matches
-        exact_matches = sum(
-            1 for d in self.questions_asked
-            if d.content.lower().strip() == question.lower().strip()
-        )
+        exact_matches = sum(1 for d in self.questions_asked if d.content.lower().strip() == question.lower().strip())
 
         if exact_matches >= self.max_same_question:
             self.loops_prevented += 1
@@ -177,9 +177,7 @@ class DecisionMemory:
             self.failed_attempts += 1
             if self.failed_attempts >= self.max_failed_attempts:
                 self.circuit_open = True
-                logger.error(
-                    f"Circuit breaker opened after {self.failed_attempts} failed attempts"
-                )
+                logger.error(f"Circuit breaker opened after {self.failed_attempts} failed attempts")
         else:
             # Reset on success
             self.failed_attempts = max(0, self.failed_attempts - 1)
@@ -207,16 +205,11 @@ class DecisionMemory:
         # Normalize args for comparison
         args_str = str(sorted(args.items())) if args else ""
 
-        executions = sum(
-            1 for d in self.tools_executed
-            if d.content == tool_name and d.context == args_str
-        )
+        executions = sum(1 for d in self.tools_executed if d.content == tool_name and d.context == args_str)
 
         if executions >= self.max_same_tool:
             self.loops_prevented += 1
-            logger.warning(
-                f"Loop prevented: tool executed {executions} times: {tool_name}({args_str})"
-            )
+            logger.warning(f"Loop prevented: tool executed {executions} times: {tool_name}({args_str})")
             return True
 
         return False
@@ -250,9 +243,7 @@ class DecisionMemory:
             self.failed_attempts += 1
             if self.failed_attempts >= self.max_failed_attempts:
                 self.circuit_open = True
-                logger.error(
-                    f"Circuit breaker opened after {self.failed_attempts} failed tool executions"
-                )
+                logger.error(f"Circuit breaker opened after {self.failed_attempts} failed tool executions")
         else:
             self.failed_attempts = max(0, self.failed_attempts - 1)
 
@@ -262,7 +253,7 @@ class DecisionMemory:
 
         A loop is detected if:
         1. Same decision repeated in recent window
-        2. Alternating pattern (A→B→A→B)
+        2. Alternating pattern (A->B->A->B)
 
         Args:
             window_size: Number of recent decisions to check
@@ -346,9 +337,7 @@ class DecisionMemory:
         Returns:
             List of recent decisions sorted by timestamp
         """
-        all_decisions = (
-            self.questions_asked + self.tools_executed + self.actions_taken
-        )
+        all_decisions = self.questions_asked + self.tools_executed + self.actions_taken
         all_decisions.sort(key=lambda d: d.timestamp, reverse=True)
         return all_decisions[:count]
 

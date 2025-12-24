@@ -9,7 +9,7 @@ Configuration:
 - Stale-while-revalidate: 1 hour (3600s)
 
 Expected Impact:
-- Repeated queries: 5s → 0.05s (100x faster)
+- Repeated queries: 5s -> 0.05s (100x faster)
 - Cost savings: ~70% reduction in LLM calls
 """
 

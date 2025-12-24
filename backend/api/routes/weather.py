@@ -107,9 +107,11 @@ async def get_weather_forecast(
             "location": {"city": city, "country": country},
             "forecast": [
                 {
-                    "datetime": item["datetime"].isoformat()
-                    if isinstance(item["datetime"], datetime)
-                    else str(item["datetime"]),
+                    "datetime": (
+                        item["datetime"].isoformat()
+                        if isinstance(item["datetime"], datetime)
+                        else str(item["datetime"])
+                    ),
                     "temperature": item["temperature"],
                     "feels_like": item["feels_like"],
                     "temp_min": item["temp_min"],

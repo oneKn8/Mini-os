@@ -5,7 +5,7 @@ Uses LLM to create intelligent summaries of old conversation history.
 Preserves key information while dramatically reducing tokens.
 
 Example:
-    40 messages (80K tokens) → 1 summary (2K tokens) = 40x compression
+    40 messages (80K tokens) -> 1 summary (2K tokens) = 40x compression
 """
 
 import logging
@@ -101,10 +101,7 @@ Summary:"""
                 max_tokens=target_tokens,
             )
 
-            logger.info(
-                f"LLM summarized {len(messages)} messages "
-                f"(target: {target_tokens} tokens)"
-            )
+            logger.info(f"LLM summarized {len(messages)} messages " f"(target: {target_tokens} tokens)")
 
             return summary
 
@@ -151,13 +148,13 @@ Summary:"""
             summary_parts.append("**Recent queries:**")
             for msg in recent_sample:
                 preview = self._extract_preview(msg.content, 80)
-                summary_parts.append(f"  • {preview}")
+                summary_parts.append(f"  - {preview}")
 
         summary = "\n".join(summary_parts)
 
         # Truncate if needed
         if len(summary) > target_tokens * 4:  # Rough char estimate
-            summary = summary[:target_tokens * 4] + "..."
+            summary = summary[: target_tokens * 4] + "..."
 
         return summary
 
@@ -177,7 +174,7 @@ Summary:"""
         for msg in user_messages:
             # Extract first question or sentence
             content = msg.content
-            sentences = content.split('.')
+            sentences = content.split(".")
             if sentences:
                 topic = sentences[0].strip()
                 if len(topic) > 10 and len(topic) < 100:
@@ -191,8 +188,15 @@ Summary:"""
 
         # Look for action indicators
         action_keywords = [
-            "created", "drafted", "scheduled", "sent", "updated",
-            "found", "searched", "analyzed", "checked"
+            "created",
+            "drafted",
+            "scheduled",
+            "sent",
+            "updated",
+            "found",
+            "searched",
+            "analyzed",
+            "checked",
         ]
 
         for msg in assistant_messages:
@@ -200,7 +204,7 @@ Summary:"""
             for keyword in action_keywords:
                 if keyword in content_lower:
                     # Extract sentence containing action
-                    sentences = msg.content.split('.')
+                    sentences = msg.content.split(".")
                     for sentence in sentences:
                         if keyword in sentence.lower():
                             action = sentence.strip()
@@ -214,14 +218,14 @@ Summary:"""
     def _extract_preview(self, text: str, max_chars: int) -> str:
         """Extract preview of text."""
         # Remove newlines
-        text = text.replace('\n', ' ').strip()
+        text = text.replace("\n", " ").strip()
 
         if len(text) <= max_chars:
             return text
 
         # Find last space before limit
         truncated = text[:max_chars]
-        last_space = truncated.rfind(' ')
+        last_space = truncated.rfind(" ")
 
         if last_space > max_chars * 0.8:  # At least 80% of desired length
             return truncated[:last_space] + "..."

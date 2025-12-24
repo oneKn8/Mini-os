@@ -17,7 +17,7 @@ def count_tokens(text: str, model: str = "gpt-4") -> int:
         encoding = tiktoken.encoding_for_model(model)
         return len(encoding.encode(text))
     except Exception:
-        # Fallback: rough estimate (1 token ≈ 4 chars)
+        # Fallback: rough estimate (1 token ~ 4 chars)
         return len(text) // 4
 
 
@@ -25,10 +25,7 @@ def analyze_system_prompt() -> Dict:
     """Analyze system prompt token usage."""
     # Format with sample context
     formatted = CONVERSATIONAL_AGENT_SYSTEM.format(
-        current_time="2024-01-15 10:30 AM",
-        day_of_week="Monday",
-        timezone="PST",
-        location="San Francisco, CA"
+        current_time="2024-01-15 10:30 AM", day_of_week="Monday", timezone="PST", location="San Francisco, CA"
     )
 
     tokens = count_tokens(formatted)
@@ -37,7 +34,7 @@ def analyze_system_prompt() -> Dict:
         "component": "System Prompt",
         "tokens": tokens,
         "chars": len(formatted),
-        "lines": formatted.count('\n'),
+        "lines": formatted.count("\n"),
     }
 
 
@@ -55,7 +52,7 @@ def analyze_conversation_history(messages: int = 10) -> Dict:
         sample_history.append(
             f"Assistant: Looking at your calendar, you have 3 events today:\n"
             f"1. Team standup at 9am\n2. Client meeting at 2pm\n3. Review session at 4pm\n\n"
-            f"The weather is sunny, 72°F - perfect for that lunchtime walk!"
+            f"The weather is sunny, 72F - perfect for that lunchtime walk!"
         )
 
     history_text = "\n\n".join(sample_history)
@@ -106,14 +103,11 @@ def analyze_user_context() -> Dict:
         "name": "John Doe",
         "email": "john@example.com",
         "timezone": "America/Los_Angeles",
-        "preferences": {
-            "work_hours": "9am-5pm",
-            "focus_time": "morning",
-            "notification_style": "minimal"
-        }
+        "preferences": {"work_hours": "9am-5pm", "focus_time": "morning", "notification_style": "minimal"},
     }
 
     import json
+
     context_text = json.dumps(sample_context, indent=2)
     tokens = count_tokens(context_text)
 
@@ -161,9 +155,9 @@ Result: {
 
 def main():
     """Analyze total token usage."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("TOKEN USAGE ANALYSIS")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     components = [
         analyze_system_prompt(),
@@ -176,13 +170,13 @@ def main():
     # Print breakdown
     total_tokens = 0
     for comp in components:
-        tokens = comp['tokens']
+        tokens = comp["tokens"]
         total_tokens += tokens
         print(f"{comp['component']:40} {tokens:>6} tokens")
 
         # Show additional details
         for key, value in comp.items():
-            if key not in ['component', 'tokens']:
+            if key not in ["component", "tokens"]:
                 print(f"  {key}: {value}")
         print()
 
@@ -190,9 +184,9 @@ def main():
     print(f"{'TOTAL (baseline query)':40} {total_tokens:>6} tokens\n")
 
     # Analyze different scenarios
-    print("="*60)
+    print("=" * 60)
     print("SCENARIO ANALYSIS")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     scenarios = {
         "Simple greeting": {
@@ -227,39 +221,29 @@ def main():
 
     # Calculate scenario costs
     base_costs = {
-        "system": components[0]['tokens'],
-        "history": components[1]['tokens'],
-        "tools": components[2]['tokens'],
-        "user_context": components[3]['tokens'],
-        "tool_results": components[4]['tokens'],
+        "system": components[0]["tokens"],
+        "history": components[1]["tokens"],
+        "tools": components[2]["tokens"],
+        "user_context": components[3]["tokens"],
+        "tool_results": components[4]["tokens"],
     }
 
     for scenario_name, multipliers in scenarios.items():
-        scenario_total = sum(
-            base_costs[comp] * mult
-            for comp, mult in multipliers.items()
-        )
+        scenario_total = sum(base_costs[comp] * mult for comp, mult in multipliers.items())
         print(f"{scenario_name:30} {int(scenario_total):>6} tokens")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("RECOMMENDATIONS")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     # Calculate optimal budgets
-    simple_tokens = int(sum(
-        base_costs[comp] * scenarios["Simple greeting"][comp]
-        for comp in base_costs
-    ))
+    simple_tokens = int(sum(base_costs[comp] * scenarios["Simple greeting"][comp] for comp in base_costs))
 
-    multi_tool_tokens = int(sum(
-        base_costs[comp] * scenarios["Multi-tool query (3 tools)"][comp]
-        for comp in base_costs
-    ))
+    multi_tool_tokens = int(
+        sum(base_costs[comp] * scenarios["Multi-tool query (3 tools)"][comp] for comp in base_costs)
+    )
 
-    complex_tokens = int(sum(
-        base_costs[comp] * scenarios["Complex conversation"][comp]
-        for comp in base_costs
-    ))
+    complex_tokens = int(sum(base_costs[comp] * scenarios["Complex conversation"][comp] for comp in base_costs))
 
     print(f"1. Simple Queries (greetings, basic info):")
     print(f"   Current: ~{simple_tokens} tokens")
@@ -278,22 +262,22 @@ def main():
 
     print("KEY INSIGHTS:")
     print("-" * 60)
-    print("✓ Most queries are multi-tool (need ~3000-4000 tokens)")
-    print("✓ System prompt is necessary (don't reduce)")
-    print("✓ Tool schemas are necessary (don't reduce)")
-    print("✓ Main optimization: conversation history")
+    print("* Most queries are multi-tool (need ~3000-4000 tokens)")
+    print("* System prompt is necessary (don't reduce)")
+    print("* Tool schemas are necessary (don't reduce)")
+    print("* Main optimization: conversation history")
     print("  - Keep last 5 messages verbatim (~500 tokens)")
     print("  - Summarize older messages (~200 tokens)")
-    print("✓ User context is small, keep it")
+    print("* User context is small, keep it")
     print()
     print("RECOMMENDED STRATEGY:")
     print("-" * 60)
-    print("• Simple queries: 1500-2000 tokens (reduce history)")
-    print("• Multi-tool queries: 3000-4000 tokens (KEEP FULL CONTEXT)")
-    print("• Complex queries: 4000-5000 tokens (light history compression)")
+    print("- Simple queries: 1500-2000 tokens (reduce history)")
+    print("- Multi-tool queries: 3000-4000 tokens (KEEP FULL CONTEXT)")
+    print("- Complex queries: 4000-5000 tokens (light history compression)")
     print()
-    print("⚠️  DON'T reduce below 3000 tokens for multi-tool queries")
-    print("   → Agent needs full context to make smart decisions")
+    print("WARNING: DON'T reduce below 3000 tokens for multi-tool queries")
+    print("   -> Agent needs full context to make smart decisions")
     print()
 
 

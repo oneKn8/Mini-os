@@ -82,7 +82,7 @@ async def test_parallel_execution_speed():
     assert result.success is True
     assert len(result.results) == 3
 
-    print(f"✓ Parallel execution: 3 tools in {duration:.2f}s (expected ~0.5s)")
+    print(f"* Parallel execution: 3 tools in {duration:.2f}s (expected ~0.5s)")
 
 
 @pytest.mark.asyncio
@@ -102,6 +102,7 @@ async def test_dependency_execution_order():
             execution_order.append(name)
             await asyncio.sleep(0.1)
             return {"result": f"{name}_complete"}
+
         return tool
 
     steps = [
@@ -127,7 +128,7 @@ async def test_dependency_execution_order():
     assert result.success is True
     assert execution_order == ["tool1", "tool2", "tool3"]
 
-    print(f"✓ Dependency order: {' -> '.join(execution_order)}")
+    print(f"* Dependency order: {' -> '.join(execution_order)}")
 
 
 @pytest.mark.asyncio
@@ -158,7 +159,7 @@ async def test_mixed_parallel_and_dependencies():
     assert len(result.results) == 3
     assert duration < 0.3, f"Expected ~0.2s with parallel+deps, got {duration}s"
 
-    print(f"✓ Mixed execution: parallel + deps in {duration:.2f}s")
+    print(f"* Mixed execution: parallel + deps in {duration:.2f}s")
 
 
 @pytest.mark.asyncio
@@ -190,7 +191,7 @@ async def test_error_handling_and_isolation():
     assert result.step_details["tool2"]["status"] == "completed"
     assert result.step_details["tool3"]["status"] == "completed"
 
-    print(f"✓ Error isolation: 1 failed, 2 succeeded")
+    print(f"* Error isolation: 1 failed, 2 succeeded")
 
 
 @pytest.mark.asyncio
@@ -214,7 +215,7 @@ async def test_dependency_failure_skips_dependents():
     assert "tool2" in result.errors
     assert result.step_details["tool2"]["status"] == "skipped"
 
-    print(f"✓ Dependency failure: tool2 skipped after tool1 failed")
+    print(f"* Dependency failure: tool2 skipped after tool1 failed")
 
 
 @pytest.mark.asyncio
@@ -244,7 +245,7 @@ async def test_retry_mechanism():
     assert result.results["flaky"]["attempts"] == 2  # Failed once, succeeded on retry
     assert result.step_details["flaky"]["attempts"] == 2
 
-    print(f"✓ Retry: succeeded after {result.results['flaky']['attempts']} attempts")
+    print(f"* Retry: succeeded after {result.results['flaky']['attempts']} attempts")
 
 
 @pytest.mark.asyncio
@@ -269,7 +270,7 @@ async def test_timeout_handling():
     assert "timeout_tool" in result.errors
     assert "Timeout" in result.errors["timeout_tool"]
 
-    print(f"✓ Timeout: tool timed out after 200ms")
+    print(f"* Timeout: tool timed out after 200ms")
 
 
 @pytest.mark.asyncio
@@ -286,6 +287,7 @@ async def test_priority_execution_order():
             execution_order.append(name)
             await asyncio.sleep(0.05)
             return {"result": f"{name}_complete"}
+
         return tool
 
     steps = [
@@ -311,7 +313,7 @@ async def test_priority_execution_order():
     assert result.success is True
     assert execution_order == ["high_priority", "medium_priority", "low_priority"]
 
-    print(f"✓ Priority order: {' -> '.join(execution_order)}")
+    print(f"* Priority order: {' -> '.join(execution_order)}")
 
 
 @pytest.mark.asyncio
@@ -328,7 +330,7 @@ async def test_from_tool_plan_conversion():
         tools=["tool1", "tool2", "tool3"],
         parallel_groups=[
             ["tool1", "tool2"],  # First group runs in parallel
-            ["tool3"],            # Second group waits for first
+            ["tool3"],  # Second group waits for first
         ],
         reasoning="Test plan",
         expected_synthesis="Combine results",
@@ -359,7 +361,7 @@ async def test_from_tool_plan_conversion():
     # Priorities should decrease with group index
     assert tool1_step.priority > tool3_step.priority
 
-    print(f"✓ ToolPlan conversion: {len(steps)} steps with correct dependencies")
+    print(f"* ToolPlan conversion: {len(steps)} steps with correct dependencies")
 
 
 if __name__ == "__main__":
@@ -389,7 +391,7 @@ if __name__ == "__main__":
                 await test_func()
                 passed += 1
             except Exception as e:
-                print(f"✗ {name}: {e}")
+                print(f"x {name}: {e}")
                 failed += 1
 
         print(f"\n=== Results: {passed} passed, {failed} failed ===\n")

@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class CacheConfig:
     """Cache configuration."""
+
     ttl_seconds: int
     stale_while_revalidate_seconds: int = 0
     max_size_mb: int = 100
@@ -62,6 +63,7 @@ class BaseCache:
         if self._redis_client is None:
             try:
                 import redis.asyncio as redis
+
                 self._redis_client = redis.from_url(
                     self.redis_url,
                     decode_responses=True,

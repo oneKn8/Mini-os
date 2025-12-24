@@ -597,7 +597,7 @@ class MultiToolExecutor:
                 elif tool_name == "get_current_weather":
                     temp = result.get("temperature", "?")
                     desc = result.get("description", "")
-                    summaries.append(f"Weather: {temp}°C, {desc}")
+                    summaries.append(f"Weather: {temp}C, {desc}")
                 elif tool_name == "get_priority_items":
                     critical = len(result.get("critical", []))
                     high = len(result.get("high", []))
